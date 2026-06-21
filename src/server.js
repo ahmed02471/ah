@@ -82,6 +82,29 @@ try {
   }
 } catch(e) { console.warn('[DB Migration]', e.message); }
 
+// ── [مؤقت] استرجاع قاعدة بيانات حقيقية مرة واحدة من جهاز المسؤول ────
+// يُحذف هذا المسار بعد الاستخدام لأسباب أمنية.
+try {
+  const multer = require('multer');
+  const fs     = require('fs');
+  const uploadDb = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+  app.post('/api/admin/restore-db', uploadDb.single('db'), (req, res) => {
+    const token = process.env.DB_RESTORE_TOKEN;
+    if (!token || req.headers['x-restore-token'] !== token) {
+      return res.status(403).json({ success: false, message: 'ممنوع' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'لم يتم إرسال ملف' });
+    const DB_PATH = path.resolve(process.env.DB_PATH || './database/traffic.db');
+    for (const suffix of ['', '-wal', '-shm']) {
+      const p = DB_PATH + suffix;
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    }
+    fs.writeFileSync(DB_PATH, req.file.buffer);
+    res.json({ success: true, message: 'تم الاستيراد — سيعاد تشغيل الخادم الآن' });
+    setTimeout(() => process.exit(0), 500);
+  });
+} catch (e) { console.warn('[restore-db]', e.message); }
+
 const sendView = (f) => (req, res) => res.sendFile(path.join(VIEWS, f));
 
 // ── الصفحات العامة ────────────────────────────────────────────────
