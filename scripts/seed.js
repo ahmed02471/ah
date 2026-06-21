@@ -1,6 +1,7 @@
 /**
  * scripts/seed.js — نظام مرور سبها
  * يُنشئ قاعدة البيانات + المستخدمين الأساسيين + أنواع المخالفات
+ * (تحديث: إعادة بناء بدون cache على Railway)
  */
 require('dotenv').config();
 const bcrypt   = require('bcryptjs');
