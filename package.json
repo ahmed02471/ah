@@ -9,9 +9,8 @@
     "setup": "node scripts/seed.js",
     "electron": "electron electron/main.js",
     "run-app": "npm run setup && npm run electron",
-    "postinstall": "electron-builder install-app-deps",
-    "dist:win": "electron-builder --win",
-    "dist:dir": "electron-builder --dir"
+    "dist:win": "electron-builder install-app-deps && electron-builder --win",
+    "dist:dir": "electron-builder install-app-deps && electron-builder --dir"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
