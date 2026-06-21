@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>تقديم بلاغ — مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Cairo',sans-serif;background:#f0f4f8;direction:rtl;min-height:100dvh;padding-bottom:72px;}
+    .hdr{background:linear-gradient(135deg,#0a1628,#1a3a6e);padding:14px 16px;color:#fff;display:flex;align-items:center;gap:12px;}
+    .back{width:36px;height:36px;background:rgba(255,255,255,.1);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;}
+    .back svg{width:18px;height:18px;}
+    .hdr-title{font-size:16px;font-weight:700;}
+    .section{padding:16px;}
+    .type-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+    .type-card{background:#fff;border-radius:12px;padding:16px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all .2s;box-shadow:0 2px 8px rgba(10,22,40,.07);}
+    .type-card.selected{border-color:#1d4ed8;background:#eff6ff;}
+    .type-card svg{width:36px;height:36px;margin:0 auto 8px;}
+    .type-card .t-title{font-size:13px;font-weight:700;color:#0a1628;}
+    .type-card .t-desc{font-size:11px;color:#64748b;margin-top:3px;}
+    .form-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(10,22,40,.07);}
+    label{display:block;font-size:12px;font-weight:600;color:#334155;margin-bottom:5px;margin-top:12px;}
+    .inp{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#0a1628;font-family:'Cairo',sans-serif;font-size:13px;}
+    .inp:focus{border-color:#1d4ed8;outline:none;}
+    textarea.inp{resize:none;height:80px;}
+    .photo-upload{border:2px dashed #e2e8f0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:#94a3b8;font-size:13px;}
+    .photo-upload:hover{border-color:#1d4ed8;color:#1d4ed8;}
+    .photo-preview{width:100%;border-radius:10px;margin-top:10px;max-height:180px;object-fit:contain;display:none;}
+    .btn-submit{width:100%;margin-top:16px;padding:13px;background:#0a1628;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;}
+    .btn-submit:hover{background:#1a3a6e;}
+    .info-box{padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;margin-top:12px;}
+    .success-box{padding:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;}
+    .bot-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;padding:6px 0 10px;z-index:50;}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:#94a3b8;padding:4px;}
+    .nav-item svg{width:22px;height:22px;}
+    .nav-item span{font-size:9px;font-family:'Cairo',sans-serif;}
+    .nav-item.active{color:#1d4ed8;}
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <button class="back" onclick="location.href='/citizen'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="hdr-title">تقديم بلاغ</span>
+  </div>
+
+  <div class="section">
+    <div class="type-row">
+      <div class="type-card" id="tc-lost" onclick="selectType('lost_plate')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M8 6V4a2 2 0 0 1 4 0v2"/><line x1="12" y1="11" x2="12" y2="16"/></svg>
+        <div class="t-title">فقدان لوحة</div>
+        <div class="t-desc">بلاغ بفقدان اللوحة المعدنية</div>
+      </div>
+      <div class="type-card" id="tc-stolen" onclick="selectType('stolen_vehicle')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><line x1="12" y1="12" x2="12" y2="3" stroke-dasharray="3"/></svg>
+        <div class="t-title">سرقة مركبة</div>
+        <div class="t-desc">بلاغ بسرقة المركبة</div>
+      </div>
+    </div>
+
+    <div id="success-msg" style="display:none;" class="success-box">
+      <div style="font-size:40px;margin-bottom:8px;">✅</div>
+      <div style="font-size:16px;font-weight:700;color:#065f46;margin-bottom:4px;">تم إرسال البلاغ</div>
+      <div style="font-size:13px;color:#047857;">سيتواصل معك قسم المرور قريباً</div>
+    </div>
+
+    <div id="report-form" style="display:none;">
+      <div class="form-card">
+        <div id="alert" style="display:none;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
+        <label>اختر المركبة</label>
+        <select class="inp" id="vehicle-sel">
+          <option value="">— اختر المركبة —</option>
+        </select>
+        <label>وصف الحادثة</label>
+        <textarea class="inp" id="desc" placeholder="اكتب وصفاً مفصلاً..."></textarea>
+        <label>صورة تقرير الشرطة (اختيارية)</label>
+        <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+          📎 اضغط لرفع صورة تقرير الشرطة
+          <img id="photo-preview" class="photo-preview">
+        </div>
+        <input type="file" id="photo-input" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
+        <div class="info-box">💡 احتفظ بنسخة من تقرير الشرطة الورقي للمراجعة اللاحقة</div>
+        <button class="btn-submit" onclick="submit()">إرسال البلاغ</button>
+      </div>
+    </div>
+
+    <div id="select-type-msg" style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">اختر نوع البلاغ أعلاه</div>
+  </div>
+
+  <nav class="bot-nav">
+    <a href="/citizen" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>الرئيسية</span></a>
+    <a href="/citizen/vehicles" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg><span>مركباتي</span></a>
+    <a href="/citizen/violations" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg><span>مخالفاتي</span></a>
+    <a href="/citizen/signs" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg><span>العلامات</span></a>
+    <a href="/citizen/reports" class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>بلاغ</span></a>
+  </nav>
+
+<script>
+const T = localStorage.getItem('auth_token');
+let selectedType = '';
+
+async function loadVehicles() {
+  const res  = await fetch('/api/v1/citizen/vehicles', { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) {
+    const sel = document.getElementById('vehicle-sel');
+    data.data.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v.id; o.textContent = `${v.plate_number} — ${v.make} ${v.model}`;
+      sel.appendChild(o);
+    });
+  }
+}
+
+function selectType(type) {
+  selectedType = type;
+  document.getElementById('tc-lost').className   = 'type-card' + (type==='lost_plate' ? ' selected' : '');
+  document.getElementById('tc-stolen').className = 'type-card' + (type==='stolen_vehicle' ? ' selected' : '');
+  document.getElementById('report-form').style.display = 'block';
+  document.getElementById('select-type-msg').style.display = 'none';
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('photo-preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submit() {
+  if (!selectedType) { showAlert('اختر نوع البلاغ', 'error'); return; }
+  const vehicleId = document.getElementById('vehicle-sel').value;
+  const desc = document.getElementById('desc').value.trim();
+  if (!desc) { showAlert('أدخل وصفاً للحادثة', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('type', selectedType);
+  fd.append('description', desc);
+  if (vehicleId) fd.append('vehicle_id', vehicleId);
+  const photo = document.getElementById('photo-input').files[0];
+  if (photo) fd.append('photo', photo);
+
+  const res = await fetch('/api/v1/citizen/reports', {
+    method:'POST', headers:{Authorization:'Bearer '+T}, body: fd
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('report-form').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  } else showAlert(data.message || 'خطأ في الإرسال', 'error');
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alert');
+  el.textContent = msg;
+  el.style.background = type==='error' ? '#fee2e2' : '#d1fae5';
+  el.style.color       = type==='error' ? '#dc2626' : '#065f46';
+  el.style.display = 'block';
+}
+
+loadVehicles();
+</script>
+</body>
+</html>

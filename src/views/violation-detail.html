@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل المخالفة — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/violations">المخالفات</a><span class="breadcrumb-sep">›</span><span>التفاصيل</span></div>
+          <h1 class="page-title">تفاصيل المخالفة</h1>
+        </div>
+        <a href="/violations" class="btn btn-secondary">رجوع</a>
+      </div>
+      <div id="content" style="max-width:720px;">
+        <div class="card"><div class="card-body"><p class="text-muted text-center">جارٍ التحميل...</p></div></div>
+      </div>
+    </div>
+  </div>
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+const id   = location.pathname.split('/').pop();
+
+const STATUS = { unpaid:'غير مدفوعة', paid:'مدفوعة', referred_to_prosecutor:'للنيابة' };
+const SC     = { unpaid:'badge-danger', paid:'badge-success', referred_to_prosecutor:'badge-warning' };
+
+async function load() {
+  const res  = await fetch(`/api/v1/violations/${id}`, { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success) { document.getElementById('content').innerHTML = `<div class="alert alert-error">${data.message}</div>`; return; }
+  const v = data.data;
+
+  const canPay = (role==='VIOLATIONS_DEPT'||role==='ADMIN') && v.status==='unpaid';
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        مخالفة رقم #${v.id}
+        <div class="card-header-actions">
+          <span class="badge ${SC[v.status]||'badge-gray'}">${STATUS[v.status]||v.status}</span>
+          ${canPay ? `<button class="btn btn-success btn-sm" onclick="pay()">تسديد المخالفة</button>` : ''}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid-2">
+          <div>
+            <div class="td-label">نوع المخالفة</div>
+            <div class="fw-7" style="font-size:15px;">${v.type_name||'—'}</div>
+            <div class="text-muted" style="font-size:12px;">${v.legal_reference||''}</div>
+          </div>
+          <div>
+            <div class="td-label">قيمة الغرامة</div>
+            <div style="font-size:22px;font-weight:900;color:var(--danger);">${v.fine_amount} <span style="font-size:13px;">د.ل</span></div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+        <div class="form-grid-2">
+          <div><div class="td-label">رقم اللوحة</div><div class="font-mono fw-7">${v.plate_number||'—'}</div></div>
+          <div><div class="td-label">المالك</div><div class="fw-7">${v.owner_name||'—'}</div></div>
+          <div><div class="td-label">الضابط المحرر</div><div>${v.officer_name||'—'}</div></div>
+          <div><div class="td-label">تاريخ التحرير</div><div>${v.issued_at?v.issued_at.replace('T',' ').split('.')[0]:'—'}</div></div>
+          <div><div class="td-label">الموقع</div><div>${v.location_note||'—'}</div></div>
+          ${v.paid_at ? `<div><div class="td-label">تاريخ السداد</div><div>${v.paid_at.replace('T',' ').split('.')[0]}</div></div>` : ''}
+          ${v.paid_by_name ? `<div><div class="td-label">سدّد بواسطة</div><div>${v.paid_by_name}</div></div>` : ''}
+        </div>
+
+        ${v.description ? `<div style="margin-top:12px;"><div class="td-label">ملاحظات</div><div style="margin-top:4px;">${v.description}</div></div>` : ''}
+
+        ${v.evidence_photo ? `
+        <div style="margin-top:16px;">
+          <div class="td-label">صورة الدليل</div>
+          <img src="${v.evidence_photo}" style="margin-top:8px;max-width:100%;border-radius:var(--r);border:1px solid var(--border);">
+        </div>` : ''}
+
+        <div class="alert alert-info" style="margin-top:16px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          لا يمكن تعديل أو حذف المخالفة بعد تحريرها — حفاظاً على سلسلة الأدلة القانونية
+        </div>
+      </div>
+    </div>`;
+}
+
+async function pay() {
+  if (!confirm('هل استلمت المبلغ نقداً من المواطن؟')) return;
+  const res  = await fetch(`/api/v1/violations/${id}/pay`, { method:'POST', headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) load();
+  else alert(data.message);
+}
+
+load();
+</script>
+</body>
+</html>

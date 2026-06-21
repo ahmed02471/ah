@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>العلامات المرورية — مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Cairo',sans-serif;background:#f0f4f8;direction:rtl;min-height:100dvh;padding-bottom:72px;}
+    .hdr{background:linear-gradient(135deg,#0a1628,#1a3a6e);padding:14px 16px;color:#fff;display:flex;align-items:center;gap:12px;}
+    .back{width:36px;height:36px;background:rgba(255,255,255,.1);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;}
+    .back svg{width:18px;height:18px;}
+    .hdr-title{font-size:16px;font-weight:700;}
+
+    /* tabs */
+    .tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;overflow-x:auto;position:sticky;top:0;z-index:10;}
+    .tabs::-webkit-scrollbar{display:none;}
+    .tab{flex-shrink:0;padding:11px 14px;font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+    .tab.active{color:#1d4ed8;border-bottom-color:#1d4ed8;}
+
+    /* categories */
+    .cat-section{padding:14px;}
+    .cat-title{font-size:14px;font-weight:700;color:#0a1628;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .cat-desc{font-size:12px;color:#64748b;margin-bottom:14px;padding:10px 12px;background:#fff;border-radius:8px;border-right:3px solid;}
+
+    /* sign grid */
+    .signs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .sign-card{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(10,22,40,.06);cursor:pointer;transition:transform .15s;}
+    .sign-card:hover{transform:translateY(-2px);}
+    .sign-icon{width:64px;height:64px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;}
+    .sign-name{font-size:11px;font-weight:600;color:#334155;line-height:1.3;}
+
+    /* SVG علامات مختلفة */
+    /* مثلث خطر */
+    .tri{fill:none;stroke:#dc2626;stroke-width:2.5;}
+    .tri-fill{fill:#dc2626;}
+    /* دائرة أمر */
+    .circ-blue{fill:#1d4ed8;}
+    /* دائرة منع */
+    .circ-red{fill:none;stroke:#dc2626;stroke-width:2.5;}
+    .circ-red-fill{fill:#dc2626;}
+    /* إرشادية */
+    .guide{fill:#1d4ed8;}
+    .guide-green{fill:#065f46;}
+
+    /* نافذة التفاصيل */
+    .detail-modal{position:fixed;inset:0;background:rgba(10,22,40,.7);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+    .detail-modal.open{display:flex;}
+    .detail-card{background:#fff;border-radius:16px;width:100%;max-width:320px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+    .detail-head{padding:20px;text-align:center;border-bottom:1px solid #f1f5f9;}
+    .detail-body{padding:16px;}
+    .detail-name{font-size:17px;font-weight:900;color:#0a1628;margin-top:10px;}
+    .detail-type{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:4px;}
+    .detail-desc{font-size:13px;color:#475569;line-height:1.7;margin-bottom:12px;}
+    .detail-rule{background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:12px;color:#334155;border-right:3px solid #1d4ed8;}
+    .detail-close{width:100%;padding:11px;background:#0a1628;color:#fff;border:none;border-radius:0 0 16px 16px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;}
+
+    .bot-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;padding:6px 0 10px;z-index:50;}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:#94a3b8;padding:4px;}
+    .nav-item svg{width:22px;height:22px;}
+    .nav-item span{font-size:9px;font-family:'Cairo',sans-serif;}
+    .nav-item.active{color:#1d4ed8;}
+  </style>
+</head>
+<body>
+
+  <div class="hdr">
+    <button class="back" onclick="location.href='/citizen'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="hdr-title">إشارات المرور الليبية</span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showCat('danger')">⚠️ علامات الخطر</div>
+    <div class="tab" onclick="showCat('mandatory')">🔵 إجبارية</div>
+    <div class="tab" onclick="showCat('prohibition')">🚫 المنع</div>
+    <div class="tab" onclick="showCat('lights')">🚦 الإشارات</div>
+    <div class="tab" onclick="showCat('guidance')">🔷 إرشادية</div>
+  </div>
+
+  <div id="cat-content"></div>
+
+  <!-- نافذة التفاصيل -->
+  <div class="detail-modal" id="detail-modal" onclick="if(event.target===this)closeDetail()">
+    <div class="detail-card">
+      <div class="detail-head">
+        <div id="d-icon" style="width:80px;height:80px;margin:0 auto;"></div>
+        <div class="detail-name" id="d-name"></div>
+        <span class="detail-type" id="d-type"></span>
+      </div>
+      <div class="detail-body">
+        <p class="detail-desc" id="d-desc"></p>
+        <div class="detail-rule" id="d-rule"></div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">إغلاق</button>
+    </div>
+  </div>
+
+  <nav class="bot-nav">
+    <a href="/citizen" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>الرئيسية</span></a>
+    <a href="/citizen/vehicles" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg><span>مركباتي</span></a>
+    <a href="/citizen/violations" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg><span>مخالفاتي</span></a>
+    <a href="/citizen/signs" class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg><span>العلامات</span></a>
+    <a href="/citizen/reports" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>بلاغ</span></a>
+  </nav>
+
+<script>
+// ── بيانات العلامات المرورية من الصورة ───────────────────────────
+const SIGNS = {
+  danger: {
+    title: 'علامات الخطر',
+    color: '#dc2626',
+    desc:  'مثلثات حمراء — تحذر من خطر قادم على الطريق',
+    signs: [
+      { name:'منحدر', desc:'يوجد منحدر أمامك — قلل من السرعة', rule:'خفف السرعة واستعد للمنحدر', svg:'triangle' },
+      { name:'انعطاف يميناً', desc:'منحنى حاد للجهة اليمنى', rule:'قلل السرعة واحذر الانزلاق', svg:'triangle' },
+      { name:'انعطاف يساراً', desc:'منحنى حاد للجهة اليسرى', rule:'قلل السرعة واحذر الانزلاق', svg:'triangle' },
+      { name:'تقاطع طرق', desc:'تقاطع رئيسي مع طريق آخر', rule:'تمهل وأعطِ الأولوية لليمين', svg:'triangle' },
+      { name:'تقاطع قريب', desc:'تقاطع على مسافة قريبة', rule:'كن يقظاً وخفف السرعة', svg:'triangle' },
+      { name:'طريق ضيق', desc:'الطريق يضيق أمامك', rule:'توقع مرور مركبات من الاتجاه المعاكس', svg:'triangle' },
+      { name:'سكة حديد', desc:'تقاطع مع خط سكة الحديد', rule:'قف تماماً وتأكد قبل العبور', svg:'triangle' },
+      { name:'ممر مشاة', desc:'يوجد ممر للمشاة أمامك', rule:'أعطِ الأولوية للمشاة دائماً', svg:'triangle' },
+      { name:'أطفال', desc:'منطقة مدرسة أو ملعب أطفال', rule:'سرعة قصوى 30 كم/ساعة', svg:'triangle' },
+      { name:'حيوانات', desc:'منطقة يتنقل فيها الحيوانات', rule:'تمهل وكن مستعداً للتوقف', svg:'triangle' },
+      { name:'منحدر 10%', desc:'انحدار بنسبة 10%', rule:'استخدم مرمدة المحرك لا الفرامل فقط', svg:'triangle' },
+      { name:'طريق ذو أولوية', desc:'هذا الطريق له حق الأولوية', rule:'السير الطبيعي، لكن انتبه للتقاطعات', svg:'triangle' },
+    ]
+  },
+  mandatory: {
+    title: 'العلامات الإجبارية',
+    color: '#1d4ed8',
+    desc:  'دوائر زرقاء — يجب الامتثال لها بشكل إلزامي',
+    signs: [
+      { name:'قف - توقف حوريث', desc:'أوقف مركبتك تماماً', rule:'يجب الوقوف الكامل ثم التأكد قبل المتابعة', svg:'circle-blue-stop' },
+      { name:'قف - شرطة', desc:'نقطة تفتيش الشرطة', rule:'أوقف مركبتك فوراً وامتثل للتعليمات', svg:'circle-blue-police' },
+      { name:'اتجاه إلزامي للأمام', desc:'يجب السير مباشرة للأمام', rule:'لا يمكن الانعطاف يميناً أو يساراً', svg:'circle-blue-up' },
+      { name:'اتجاه إلزامي يميناً', desc:'يجب الانعطاف يميناً', rule:'الانعطاف يميناً إلزامي', svg:'circle-blue-right' },
+      { name:'اتجاه إلزامي يساراً', desc:'يجب الانعطاف يساراً', rule:'الانعطاف يساراً إلزامي', svg:'circle-blue-left' },
+      { name:'دوار إلزامي', desc:'يجب الدوران في الميدان', rule:'ادخل الميدان وانتظر الفرصة المناسبة', svg:'circle-blue-round' },
+      { name:'حد السرعة 30', desc:'السرعة القصوى 30 كم/ساعة', rule:'لا تتجاوز السرعة المحددة', svg:'circle-blue-30' },
+      { name:'مسار للمشاة', desc:'مخصص للمشاة فقط', rule:'ممنوع دخول المركبات', svg:'circle-blue-walk' },
+      { name:'مسار للدراجات', desc:'مخصص للدراجات فقط', rule:'ممنوع دخول مركبات أخرى', svg:'circle-blue-bike' },
+    ]
+  },
+  prohibition: {
+    title: 'علامات المنع',
+    color: '#dc2626',
+    desc:  'دوائر حمراء — تمنع فعلاً محدداً',
+    signs: [
+      { name:'ممنوع الدخول', desc:'ممنوع الدخول من هذا الاتجاه', rule:'المخالفة: غرامة وسحب الرخصة', svg:'circ-nosign' },
+      { name:'ممنوع العبور', desc:'الطريق مغلق للمركبات', rule:'ابحث عن طريق بديل', svg:'circ-nopass' },
+      { name:'ممنوع الوقوف', desc:'لا يمكن التوقف أو الانتظار', rule:'المخالفة: رفع المركبة ودفع غرامة', svg:'circ-nopark' },
+      { name:'تحديد السرعة 50', desc:'السرعة القصوى 50 كم/ساعة', rule:'لا تتجاوز السرعة المحددة — غرامة 100 دينار', svg:'circ-50' },
+      { name:'ممنوع التجاوز', desc:'ممنوع تجاوز المركبات', rule:'الانتظار حتى علامة انتهاء الحظر', svg:'circ-noovertake' },
+      { name:'ممنوع العبور للشاحنات', desc:'ممنوع عبور الشاحنات', rule:'الشاحنات تستخدم الطريق الالتفافي', svg:'circ-notruck' },
+      { name:'ممنوع الدوران', desc:'ممنوع الاستدارة', rule:'ابحث عن نقطة دوران مصرح بها', svg:'circ-noturn' },
+      { name:'ممنوع تحديد اليسار', desc:'ممنوع الانعطاف يساراً', rule:'المخالفة: غرامة فورية', svg:'circ-noleft' },
+      { name:'ممنوع المرور ليلاً', desc:'ممنوع المرور بعد ساعات محددة', rule:'الالتزام بساعات المرور المصرح بها', svg:'circ-nonight' },
+    ]
+  },
+  lights: {
+    title: 'الإشارات الضوئية واليدوية',
+    color: '#f59e0b',
+    desc:  'إشارات المرور الضوئية والإشارات اليدوية لرجال المرور',
+    signs: [
+      { name:'أحمر — قف', desc:'الإشارة الحمراء تعني التوقف الإلزامي', rule:'أوقف مركبتك قبل خط التوقف — المخالفة: 500 دينار', svg:'light-red' },
+      { name:'أصفر — استعد', desc:'الإشارة الصفراء تعني الاستعداد للوقوف', rule:'لا تتسرع للعبور — أبطئ سرعتك', svg:'light-yellow' },
+      { name:'أخضر — تفضل', desc:'الإشارة الخضراء تعني المرور بحذر', rule:'مرر مركبتك مع التأكد من سلامة الطريق', svg:'light-green' },
+      { name:'رجل المرور — قف', desc:'ذراع الشرطي للأمام تعني التوقف', rule:'أوقف مركبتك فوراً وامتثل للتعليمات', svg:'officer-stop' },
+      { name:'رجل المرور — أكمل', desc:'ذراع الشرطي للجانب يعني الاستمرار', rule:'انطلق بهدوء وفق توجيهات الشرطي', svg:'officer-go' },
+    ]
+  },
+  guidance: {
+    title: 'العلامات الإرشادية',
+    color: '#065f46',
+    desc:  'لوحات زرقاء وخضراء — ترشدك للخدمات والاتجاهات',
+    signs: [
+      { name:'محطة وقود', desc:'يوجد محطة وقود على مسافة 200 متر', rule:'اتجه يميناً للوصول للمحطة', svg:'guide-fuel' },
+      { name:'مستشفى', desc:'يوجد مستشفى أو مركز صحي قريب', rule:'في حالات الطوارئ اتجه لهذا الطريق', svg:'guide-hospital' },
+      { name:'مواقف السيارات', desc:'منطقة انتظار السيارات', rule:'استخدم المواقف المخصصة وادفع الرسوم', svg:'guide-parking' },
+      { name:'هاتف عام', desc:'يوجد هاتف عام على مسافة قريبة', rule:'للطوارئ اتصل على 193 شرطة النجدة', svg:'guide-phone' },
+      { name:'لافتة الاتجاهات', desc:'تشير إلى المدن والمناطق القريبة', rule:'اتبع الاتجاهات الصحيحة لوجهتك', svg:'guide-direction' },
+      { name:'بداية منطقة السكن', desc:'دخلت منطقة سكنية', rule:'السرعة القصوى 30 كم/ساعة — الأولوية للمشاة', svg:'guide-residential' },
+    ]
+  }
+};
+
+// SVG generator
+function makeSvg(type, size=64) {
+  const s = size, h = s/2, q = s/4;
+  switch(type) {
+    case 'triangle':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><polygon points="50,10 90,85 10,85" fill="none" stroke="#dc2626" stroke-width="5"/><line x1="50" y1="35" x2="50" y2="60" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/><circle cx="50" cy="72" r="3" fill="#dc2626"/></svg>`;
+    case 'circle-blue-stop':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#dc2626"/><text x="50" y="52" text-anchor="middle" fill="white" font-size="22" font-family="Cairo" dominant-baseline="middle" font-weight="900">قف</text></svg>`;
+    case 'circle-blue-up':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><line x1="50" y1="70" x2="50" y2="30" stroke="white" stroke-width="8" stroke-linecap="round"/><polyline points="35,45 50,30 65,45" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    case 'circle-blue-right':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><line x1="30" y1="50" x2="70" y2="50" stroke="white" stroke-width="8" stroke-linecap="round"/><polyline points="55,35 70,50 55,65" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    case 'circle-blue-left':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><line x1="70" y1="50" x2="30" y2="50" stroke="white" stroke-width="8" stroke-linecap="round"/><polyline points="45,35 30,50 45,65" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    case 'circle-blue-round':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><path d="M35,50 A20,20 0 1 1 65,50" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/><polyline points="60,38 65,50 52,50" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    case 'circle-blue-30':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" stroke="#dc2626" stroke-width="5" fill="white"/><text x="50" y="55" text-anchor="middle" fill="#dc2626" font-size="32" font-family="Arial" font-weight="900" dominant-baseline="middle">30</text></svg>`;
+    case 'circle-blue-walk':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><circle cx="50" cy="28" r="7" fill="white"/><line x1="50" y1="35" x2="50" y2="62" stroke="white" stroke-width="6" stroke-linecap="round"/><line x1="35" y1="50" x2="65" y2="50" stroke="white" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="62" x2="38" y2="78" stroke="white" stroke-width="5" stroke-linecap="round"/><line x1="50" y1="62" x2="62" y2="78" stroke="white" stroke-width="5" stroke-linecap="round"/></svg>`;
+    case 'circle-blue-bike':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#1d4ed8"/><circle cx="32" cy="62" r="12" fill="none" stroke="white" stroke-width="4"/><circle cx="68" cy="62" r="12" fill="none" stroke="white" stroke-width="4"/><path d="M32,62 L50,38 L68,62" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="38" r="4" fill="white"/></svg>`;
+    case 'circ-nosign':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><rect x="15" y="43" width="70" height="14" fill="#dc2626"/></svg>`;
+    case 'circ-nopass':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><line x1="20" y1="20" x2="80" y2="80" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/><text x="50" y="50" text-anchor="middle" fill="#dc2626" font-size="28" dominant-baseline="middle">✕</text></svg>`;
+    case 'circ-nopark':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><text x="50" y="56" text-anchor="middle" fill="#dc2626" font-size="38" font-family="Arial" font-weight="900" dominant-baseline="middle">P</text><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'circ-50':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><text x="50" y="55" text-anchor="middle" fill="#dc2626" font-size="32" font-family="Arial" font-weight="900" dominant-baseline="middle">50</text></svg>`;
+    case 'circ-noovertake':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><rect x="28" y="55" width="16" height="20" rx="3" fill="#dc2626"/><rect x="56" y="55" width="16" height="20" rx="3" fill="#666"/><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'circ-notruck':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><rect x="22" y="40" width="40" height="22" rx="2" fill="#666"/><rect x="62" y="44" width="16" height="18" rx="2" fill="#666"/><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'circ-noturn':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><path d="M30,70 Q30,30 70,30" fill="none" stroke="#666" stroke-width="6" stroke-linecap="round"/><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'circ-noleft':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><line x1="70" y1="50" x2="30" y2="50" stroke="#666" stroke-width="6" stroke-linecap="round"/><polyline points="45,35 30,50 45,65" fill="none" stroke="#666" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'circ-nonight':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="white" stroke="#dc2626" stroke-width="5"/><circle cx="50" cy="50" r="18" fill="#666"/><line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/></svg>`;
+    case 'light-red':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="30" y="5" width="40" height="90" rx="10" fill="#1a1a2e"/><circle cx="50" cy="28" r="14" fill="#dc2626"/><circle cx="50" cy="55" r="14" fill="#333"/><circle cx="50" cy="82" r="14" fill="#333"/></svg>`;
+    case 'light-yellow':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="30" y="5" width="40" height="90" rx="10" fill="#1a1a2e"/><circle cx="50" cy="28" r="14" fill="#333"/><circle cx="50" cy="55" r="14" fill="#f59e0b"/><circle cx="50" cy="82" r="14" fill="#333"/></svg>`;
+    case 'light-green':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="30" y="5" width="40" height="90" rx="10" fill="#1a1a2e"/><circle cx="50" cy="28" r="14" fill="#333"/><circle cx="50" cy="55" r="14" fill="#333"/><circle cx="50" cy="82" r="14" fill="#059669"/></svg>`;
+    case 'officer-stop':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="22" r="12" fill="#1d4ed8"/><rect x="38" y="34" width="24" height="35" rx="4" fill="#1d4ed8"/><line x1="38" y1="50" x2="10" y2="40" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/><line x1="62" y1="50" x2="90" y2="40" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/><line x1="44" y1="69" x2="36" y2="92" stroke="#1d4ed8" stroke-width="6" stroke-linecap="round"/><line x1="56" y1="69" x2="64" y2="92" stroke="#1d4ed8" stroke-width="6" stroke-linecap="round"/></svg>`;
+    case 'officer-go':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="22" r="12" fill="#059669"/><rect x="38" y="34" width="24" height="35" rx="4" fill="#059669"/><line x1="38" y1="46" x2="15" y2="46" stroke="#059669" stroke-width="7" stroke-linecap="round"/><line x1="62" y1="46" x2="85" y2="46" stroke="#059669" stroke-width="7" stroke-linecap="round"/><line x1="44" y1="69" x2="36" y2="92" stroke="#059669" stroke-width="6" stroke-linecap="round"/><line x1="56" y1="69" x2="64" y2="92" stroke="#059669" stroke-width="6" stroke-linecap="round"/></svg>`;
+    case 'guide-fuel':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="20" y="20" width="45" height="65" rx="5" fill="#1d4ed8"/><rect x="28" y="30" width="30" height="20" rx="3" fill="white" opacity=".3"/><rect x="65" y="30" width="12" height="35" rx="3" fill="#1d4ed8" stroke="white" stroke-width="2"/><text x="43" y="75" text-anchor="middle" fill="white" font-size="14" font-family="Arial" font-weight="900">FUEL</text></svg>`;
+    case 'guide-hospital':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="#dc2626"/><rect x="44" y="28" width="12" height="44" fill="white"/><rect x="28" y="44" width="44" height="12" fill="white"/></svg>`;
+    case 'guide-parking':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="#1d4ed8"/><text x="50" y="62" text-anchor="middle" fill="white" font-size="52" font-family="Arial" font-weight="900" dominant-baseline="middle">P</text></svg>`;
+    case 'guide-phone':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="#1d4ed8"/><rect x="35" y="25" width="30" height="50" rx="5" fill="white"/><rect x="40" y="30" width="20" height="32" rx="2" fill="#1d4ed8"/><circle cx="50" cy="68" r="4" fill="#1d4ed8"/></svg>`;
+    case 'guide-direction':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><rect x="10" y="35" width="65" height="30" rx="4" fill="#065f46"/><polygon points="75,35 90,50 75,65" fill="#065f46"/><text x="40" y="52" text-anchor="middle" fill="white" font-size="14" font-family="Cairo" dominant-baseline="middle">→ سبها</text></svg>`;
+    case 'guide-residential':
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><polygon points="50,10 85,40 85,90 15,90 15,40" fill="#065f46"/><rect x="38" y="58" width="24" height="32" fill="white"/><polygon points="50,20 75,42 25,42" fill="white" opacity=".3"/></svg>`;
+    default:
+      return `<svg width="18" height="18" width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#e2e8f0"/><text x="50" y="55" text-anchor="middle" font-size="30">⚠️</text></svg>`;
+  }
+}
+
+let activeCat = 'danger';
+let activeSign = null;
+
+function showCat(cat) {
+  activeCat = cat;
+  // تحديث الـ tabs
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const cats = ['danger','mandatory','prohibition','lights','guidance'];
+    t.className = 'tab' + (cats[i]===cat ? ' active' : '');
+  });
+  const data = SIGNS[cat];
+  document.getElementById('cat-content').innerHTML = `
+    <div class="cat-section">
+      <div class="cat-title" style="color:${data.color};">${data.title}</div>
+      <div class="cat-desc" style="border-color:${data.color};">${data.desc}</div>
+      <div class="signs-grid">
+        ${data.signs.map((s,i) => `
+          <div class="sign-card" onclick="showDetail(${JSON.stringify(cat)},${i})">
+            <div class="sign-icon">${makeSvg(s.svg)}</div>
+            <div class="sign-name">${s.name}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function showDetail(cat, i) {
+  const sign = SIGNS[cat].signs[i];
+  const color= SIGNS[cat].color;
+  document.getElementById('d-icon').innerHTML = makeSvg(sign.svg, 80);
+  document.getElementById('d-name').textContent = sign.name;
+  document.getElementById('d-type').textContent = SIGNS[cat].title;
+  document.getElementById('d-type').style = `background:${color}20;color:${color};`;
+  document.getElementById('d-desc').textContent = sign.desc;
+  document.getElementById('d-rule').textContent = '📋 ' + sign.rule;
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeDetail() { document.getElementById('detail-modal').classList.remove('open'); }
+
+showCat('danger');
+</script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلب نقل ملكية — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/transfers">نقل الملكية</a><span class="breadcrumb-sep">›</span><span>طلب جديد</span></div>
+          <h1 class="page-title">طلب نقل ملكية جديد</h1>
+        </div>
+        <a href="/transfers" class="btn btn-secondary">رجوع</a>
+      </div>
+
+      <div style="max-width:700px;">
+        <div id="alert" class="alert" style="display:none;"></div>
+
+        <!-- تحذير المهلة -->
+        <div class="alert alert-warning">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          بعد تأكيد الطلب ستُعلَّق اللوحة فوراً وتبدأ مهلة <strong>7 أيام</strong> لإتمام الإجراءات. انتهاء المهلة يُولّد مخالفة تلقائياً.
+        </div>
+
+        <!-- المركبة -->
+        <div class="card">
+          <div class="card-header"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>المركبة</div>
+          <div class="card-body">
+            <div style="display:flex;gap:10px;">
+              <div class="input-wrap flex-1">
+                <span class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/></svg></span>
+                <input class="form-input" id="plate" placeholder="أدخل رقم اللوحة">
+              </div>
+              <button class="btn btn-secondary" onclick="searchVehicle()">بحث</button>
+            </div>
+            <div id="v-card" style="display:none;margin-top:12px;padding:12px;background:var(--surface-3);border-radius:var(--r);">
+              <div class="fw-7" id="v-info">—</div>
+              <div class="text-muted" id="v-owner" style="margin-top:4px;font-size:13px;"></div>
+              <div id="v-alerts" style="margin-top:8px;"></div>
+            </div>
+            <input type="hidden" id="vehicle-id">
+          </div>
+        </div>
+
+        <!-- بيانات المشتري -->
+        <div class="card" id="buyer-form" style="display:none;">
+          <div class="card-header"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>بيانات المشتري</div>
+          <div class="card-body">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">الاسم الكامل <span class="req">*</span></label>
+                <input class="form-input" id="buyer-name" placeholder="اسم المشتري">
+              </div>
+              <div class="form-group">
+                <label class="form-label">رقم البطاقة الشخصية <span class="req">*</span></label>
+                <input class="form-input" id="buyer-nid" placeholder="12 رقم" maxlength="12" inputmode="numeric">
+              </div>
+              <div class="form-group">
+                <label class="form-label">رقم رخصة القيادة</label>
+                <input class="form-input" id="buyer-license" placeholder="رقم الرخصة">
+              </div>
+              <div class="form-group">
+                <label class="form-label">محرر العقد</label>
+                <select class="form-select" id="contract-writer">
+                  <option value="">— اختر المحرر —</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">رقم العقد</label>
+                <input class="form-input" id="contract-num">
+              </div>
+              <div class="form-group">
+                <label class="form-label">تاريخ العقد</label>
+                <input class="form-input" id="contract-date" type="date">
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+              <button class="btn btn-primary" onclick="submit()" style="flex:1;">تأكيد بدء نقل الملكية</button>
+              <a href="/transfers" class="btn btn-secondary">إلغاء</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+
+async function loadWriters() {
+  const res  = await fetch('/api/v1/contract-writers', { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success) return;
+  const sel = document.getElementById('contract-writer');
+  data.data.forEach(w => {
+    const o = document.createElement('option');
+    o.value = w.name;
+    o.textContent = `${w.name}${w.court_number ? ` (${w.court_number})` : ''}`;
+    sel.appendChild(o);
+  });
+}
+
+async function searchVehicle() {
+  const plate = document.getElementById('plate').value.trim();
+  if (!plate) return;
+  const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(plate)}&limit=1`, { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success || !data.data.vehicles.length) {
+    showAlert('لم يتم العثور على مركبة', 'error'); return;
+  }
+  const v = data.data.vehicles[0];
+  document.getElementById('vehicle-id').value = v.id;
+  document.getElementById('v-info').textContent = `${v.plate_number} — ${v.make} ${v.model} ${v.year}`;
+  document.getElementById('v-owner').textContent = `المالك: ${v.owner_name||'—'}`;
+
+  let alertsHtml = '';
+  if (v.status === 'suspended') alertsHtml += `<div class="alert alert-error" style="padding:8px 12px;margin:4px 0;">🔒 المركبة مُعلَّقة مسبقاً</div>`;
+  if (v.unpaid_violations > 0) alertsHtml += `<div class="alert alert-error" style="padding:8px 12px;margin:4px 0;">⚠️ يوجد ${v.unpaid_violations} مخالفة غير مدفوعة — يجب تسديدها أولاً</div>`;
+  document.getElementById('v-alerts').innerHTML = alertsHtml;
+
+  document.getElementById('v-card').style.display = 'block';
+  if (v.status !== 'suspended' && v.unpaid_violations === 0)
+    document.getElementById('buyer-form').style.display = 'block';
+}
+
+async function submit() {
+  const body = {
+    vehicle_id:       parseInt(document.getElementById('vehicle-id').value),
+    buyer_national_id: document.getElementById('buyer-nid').value.trim(),
+    buyer_name:        document.getElementById('buyer-name').value.trim(),
+    buyer_id_card:     document.getElementById('buyer-nid').value.trim(),
+    buyer_license:     document.getElementById('buyer-license').value.trim(),
+    contract_writer:   document.getElementById('contract-writer').value,
+    contract_number:   document.getElementById('contract-num').value.trim(),
+    contract_date:     document.getElementById('contract-date').value,
+  };
+  if (!body.vehicle_id || !body.buyer_national_id || !body.buyer_name)
+    return showAlert('يرجى ملء جميع الحقول المطلوبة', 'error');
+
+  const res  = await fetch('/api/v1/transfers/initiate', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert(`✅ تم تعليق اللوحة. المهلة حتى: ${data.data.deadline?.split(' ')[0]}`, 'success');
+    setTimeout(() => location.href = '/transfers', 2000);
+  } else showAlert(data.message, 'error');
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alert');
+  el.className = `alert alert-${type==='error'?'error':'success'}`;
+  el.textContent = msg; el.style.display = 'flex';
+}
+
+loadWriters();
+</script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الطلبات المعلّقة — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .req-card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+    .req-card:hover{border-color:var(--blue);box-shadow:0 2px 12px rgba(29,78,216,.08);}
+    .req-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .req-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+    .req-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0;font-size:12px;}
+    .req-info-item{background:var(--surface-3);border-radius:6px;padding:6px 10px;}
+    .req-info-item label{display:block;color:var(--text-4);font-size:10px;margin-bottom:2px;}
+    .step-badge{background:var(--blue);color:#fff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;}
+    .deadline-warn{color:var(--danger);font-weight:700;}
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>الطلبات المعلّقة</span></div>
+      <h1 class="page-title">الطلبات المعلّقة</h1>
+      <p class="page-subtitle" id="sub">الطلبات التي تنتظر إجراءك</p>
+    </div>
+    <button class="btn btn-secondary" onclick="loadAll()">↻ تحديث</button>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+
+  <!-- مؤشرات الأدوار -->
+  <div id="stats-row" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+  <!-- الطلبات -->
+  <div id="list"></div>
+
+</div></div>
+
+<!-- Modal إدخال بيانات الفحص (INSP_CHIEF) -->
+<div id="insp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;overflow-y:auto;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:560px;margin:20px auto;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">🔧 إدخال بيانات المركبة والفحص الفني</h3>
+      <button onclick="closeModal('insp-modal')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div id="insp-owner-info" class="alert alert-info" style="font-size:12px;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">نوع المركبة *</label>
+        <select class="form-select" id="i-vtype">
+          <option value="">— اختر —</option>
+          <option>سيارة خاصة</option><option>سيارة ركوب عامة</option>
+          <option>سيارة حافلة</option><option>سيارة نقل بضائع</option>
+          <option>سيارة جرارة</option><option>مركبة مقطورة</option><option>دراجة نارية</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">رقم الهيكل *</label><input class="form-input" id="i-chassis" dir="ltr" placeholder="VIN"></div>
+      <div class="form-group"><label class="form-label">الصانع *</label><input class="form-input" id="i-make"></div>
+      <div class="form-group"><label class="form-label">الموديل *</label><input class="form-input" id="i-model"></div>
+      <div class="form-group"><label class="form-label">سنة الصنع *</label><input class="form-input" id="i-year" type="number" min="1970" max="2030"></div>
+      <div class="form-group"><label class="form-label">اللون *</label><input class="form-input" id="i-color"></div>
+      <div class="form-group"><label class="form-label">نتيجة الفحص *</label>
+        <select class="form-select" id="i-result" onchange="autoExpiry()">
+          <option value="">— اختر —</option>
+          <option value="صالحة">✅ صالحة</option>
+          <option value="غير صالحة">❌ غير صالحة</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">صالح حتى</label><input class="form-input" id="i-expiry" type="date"></div>
+      <div class="form-group"><label class="form-label">رقم المحرك</label><input class="form-input" id="i-engine" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">رسم الفحص (د.ل)</label><input class="form-input" id="i-fee" type="number" step="0.5"></div>
+      <div class="form-group"><label class="form-label">بلد المنشأ</label><input class="form-input" id="i-origin"></div>
+      <div class="form-group"><label class="form-label">الوقود</label>
+        <select class="form-select" id="i-fuel"><option>بنزين</option><option>ديزل</option><option>غاز</option><option>كهربائي</option></select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:8px;"><label class="form-label">ملاحظات الفحص</label><textarea class="form-input" id="i-notes" rows="2"></textarea></div>
+    <div class="alert alert-warning" style="font-size:11px;margin:8px 0;">⚠️ لا تُدخل البل — يُدخله قسم التسجيل لاحقاً</div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitInspection()">✅ إرسال بيانات الفحص لقسم التسجيل</button>
+      <button class="btn btn-secondary" onclick="closeModal('insp-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal إدخال البل (REG_CHIEF) -->
+<div id="bel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:460px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">📄 إدخال البل وتوليد اللوحة</h3>
+      <button onclick="closeModal('bel-modal')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div id="bel-veh-info" class="alert alert-info" style="font-size:12px;margin-bottom:14px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">رقم البل</label><input class="form-input" id="b-number" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">رسم البل (د.ل)</label><input class="form-input" id="b-fee" type="number" step="0.5"></div>
+      <div class="form-group" style="grid-column:1/-1;"><label class="form-label">صالح حتى *</label><input class="form-input" id="b-expiry" type="date"></div>
+    </div>
+    <div class="alert alert-info" style="font-size:12px;margin:10px 0;">🏁 سيُولَّد رقم اللوحة و QR تلقائياً وترسل للمدير للاعتماد النهائي</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-success" style="flex:1;" onclick="submitBel()">🏁 توليد اللوحة وإرسال للمدير</button>
+      <button class="btn btn-secondary" onclick="closeModal('bel-modal')">إلغاء</button>
+    </div>
+    <div id="bel-result" style="display:none;margin-top:12px;background:var(--blue-bg);border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-3);">اللوحة المولَّدة</div>
+      <div id="bel-plate-num" style="font-size:22px;font-weight:900;font-family:monospace;color:var(--blue);letter-spacing:2px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+let activePendingId = null;
+let items = [];
+
+const STEP_INFO = {
+  'step1_pending_admin':          { label:'⏳ ينتظر موافقة المدير',          color:'#d97706', bg:'rgba(217,119,6,.1)' },
+  'step2_approved':               { label:'✅ موافقة — أرسل للفحص',          color:'#059669', bg:'rgba(5,150,105,.1)' },
+  'step3_at_inspection':          { label:'🔧 عند قسم الفحص',                color:'#2563eb', bg:'rgba(37,99,235,.1)' },
+  'step4_back_to_reg':            { label:'📬 اكتمل الفحص — أدخل البل',      color:'#7c3aed', bg:'rgba(124,58,237,.1)' },
+  'step5_pending_final_approval': { label:'⏳ ينتظر اعتماد نهائي',           color:'#d97706', bg:'rgba(217,119,6,.1)' },
+  'step6_approved_for_plate':     { label:'🖨️ جاهز للطباعة',                 color:'#059669', bg:'rgba(5,150,105,.1)' },
+  'completed':                    { label:'✅ مكتمل',                         color:'#059669', bg:'rgba(5,150,105,.1)' },
+  'rejected':                     { label:'❌ مرفوض',                         color:'#dc2626', bg:'rgba(220,38,38,.1)' },
+};
+
+async function loadAll() {
+  try {
+    const res  = await fetch('/api/v1/vehicles/pending/list', {headers:{Authorization:'Bearer '+T}});
+    if (!res.ok) {
+      document.getElementById('list').innerHTML = `<div class="req-card" style="text-align:center;padding:30px;color:var(--text-4);">خطأ في الاتصال: ${res.status}</div>`;
+      return;
+    }
+    const data = await res.json();
+    if (!data.success) {
+      document.getElementById('list').innerHTML = `<div class="req-card" style="text-align:center;padding:30px;color:var(--text-4);">${data.message||'خطأ في تحميل البيانات'}</div>`;
+      return;
+    }
+    items = data.data;
+
+  // إحصائيات
+  const counts = {};
+  items.forEach(i=>{ counts[i.status]=(counts[i.status]||0)+1; });
+  document.getElementById('stats-row').innerHTML = Object.entries(counts).map(([s,c])=>{
+    const info = STEP_INFO[s] || {label:s, color:'#64748b', bg:'rgba(100,116,139,.1)'};
+    return `<div style="background:${info.bg};border-radius:10px;padding:12px;border:1px solid ${info.color}30;">
+      <div style="font-size:22px;font-weight:900;color:${info.color};">${c}</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px;">${info.label}</div>
+    </div>`;
+  }).join('');
+
+  if (!items.length) {
+    document.getElementById('list').innerHTML = `<div class="req-card" style="text-align:center;padding:40px;color:var(--text-4);">لا توجد طلبات معلّقة تنتظرك</div>`;
+    return;
+  }
+
+  document.getElementById('list').innerHTML = items.map(p => buildCard(p)).join('');
+  } catch(e) {
+    document.getElementById('list').innerHTML = `<div class="req-card" style="text-align:center;padding:30px;color:var(--text-4);">❌ خطأ: ${e.message}</div>`;
+  }
+}
+
+function buildCard(p) {
+  const si    = STEP_INFO[p.status] || {label:p.status, color:'#64748b', bg:'transparent'};
+  const vd    = safeJSON(p.vehicle_data);
+  const id    = safeJSON(p.inspection_data);
+  const bd    = safeJSON(p.bel_data);
+  const today = new Date().toISOString().split('T')[0];
+
+  let actions = '';
+  // ADMIN
+  if (role==='ADMIN') {
+    if (p.status==='step1_pending_admin') {
+      actions = `
+        <button class="btn btn-success btn-sm" onclick="adminDecide(${p.id},'approved')">✅ موافقة</button>
+        <button class="btn btn-danger btn-sm"  onclick="adminDecideReject(${p.id})">❌ رفض</button>
+        <button class="btn btn-secondary btn-sm" onclick="viewPDF(${p.id})">📄 عرض الطلب PDF</button>`;
+    }
+    if (p.status==='step5_pending_final_approval') {
+      actions = `
+        <button class="btn btn-success btn-sm" onclick="finalApprove(${p.id})">✅ اعتماد نهائي</button>
+        <button class="btn btn-danger btn-sm"  onclick="finalReject(${p.id})">❌ رفض</button>
+        <button class="btn btn-secondary btn-sm" onclick="viewPDF(${p.id})">📄 عرض الملف الكامل</button>`;
+    }
+  }
+  // REG_CHIEF
+  if (role==='REG_CHIEF') {
+    if (p.status==='step2_approved')
+      actions = `<button class="btn btn-primary btn-sm" onclick="sendToInsp(${p.id})">📤 إرسال لقسم الفحص الفني</button>`;
+    if (p.status==='step4_back_to_reg')
+      actions = `<button class="btn btn-success btn-sm" onclick="openBelModal(${p.id})">📄 إدخال البل وتوليد اللوحة</button>`;
+  }
+  // INSP_CHIEF
+  if (role==='INSP_CHIEF' && p.status==='step3_at_inspection')
+    actions = `<button class="btn btn-primary btn-sm" onclick="openInspModal(${p.id})">🔧 إدخال بيانات الفحص</button>`;
+  // PLATE_DEPT
+  if (role==='PLATE_DEPT' && p.status==='step6_approved_for_plate')
+    actions = `<button class="btn btn-success btn-sm" onclick="issuePlate(${p.id})">🖨️ إصدار اللوحة (30 د.ل)</button>`;
+
+  return `
+  <div class="req-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;">${p.owner_name} <span style="font-size:12px;color:var(--text-4);font-weight:400;">— الرقم الوطني: ${p.owner_national_id}</span></div>
+        <div style="font-size:11px;color:var(--text-4);margin-top:2px;">طلب #${p.id} · ${(p.created_at||p.step1_at||'').split('T')[0]||''}</div>
+      </div>
+      <span class="req-status" style="background:${si.bg};color:${si.color};border:1px solid ${si.color}40;">${si.label}</span>
+    </div>
+    <div class="req-info">
+      <div class="req-info-item"><label>المركبة</label>${vd.make||'—'} ${vd.model||''} ${vd.year||''}</div>
+      <div class="req-info-item"><label>نتيجة الفحص</label>${id.inspection_result||'—'}</div>
+      <div class="req-info-item"><label>اللوحة</label><span style="font-family:monospace;font-weight:700;">${p.plate_number||bd.plate_number||'—'}</span></div>
+    </div>
+    ${actions ? `<div class="req-actions">${actions}</div>` : ''}
+  </div>`;
+}
+
+function safeJSON(s) { try { return JSON.parse(s||'{}'); } catch(_){ return {}; } }
+
+// ── الإجراءات ─────────────────────────────────────────────────
+async function adminDecide(id, decision, reason='') {
+  await api('/api/v1/vehicles/step2/decision',{pending_id:id,decision,reason},'✅ تمت الموافقة — أُرسل إشعار لقسم التسجيل');
+}
+
+async function adminDecideReject(id) {
+  const r = prompt('سبب الرفض:');
+  if (!r) return;
+  await api('/api/v1/vehicles/step2/decision',{pending_id:id,decision:'rejected',reason:r},'❌ تم الرفض');
+}
+
+async function sendToInsp(id) {
+  await api('/api/v1/vehicles/step3/send-to-inspection',{pending_id:id},'✅ تم الإرسال لقسم الفحص الفني');
+}
+
+function openInspModal(id) {
+  activePendingId = id;
+  const p = items.find(x=>x.id===id);
+  document.getElementById('insp-owner-info').textContent =
+    `المالك: ${p?.owner_name} · الرقم الوطني: ${p?.owner_national_id} · رخصة: ${p?.driving_license||'—'}`;
+  document.getElementById('insp-modal').style.display='flex';
+}
+
+function autoExpiry() {
+  if (document.getElementById('i-result').value==='صالحة') {
+    const d=new Date(); d.setFullYear(d.getFullYear()+1);
+    document.getElementById('i-expiry').value=d.toISOString().split('T')[0];
+  }
+}
+
+async function submitInspection() {
+  const flds = ['i-vtype','i-chassis','i-make','i-model','i-year','i-color','i-result'];
+  for (const f of flds) if (!document.getElementById(f).value.trim()) return showAlert('أكمل الحقول الأساسية','error');
+  await api('/api/v1/vehicles/step4/inspection',{
+    pending_id:activePendingId,
+    vehicle_type:document.getElementById('i-vtype').value,
+    chassis_number:document.getElementById('i-chassis').value.trim(),
+    engine_number:document.getElementById('i-engine').value.trim(),
+    make:document.getElementById('i-make').value.trim(),
+    model:document.getElementById('i-model').value.trim(),
+    year:parseInt(document.getElementById('i-year').value),
+    color:document.getElementById('i-color').value.trim(),
+    country_of_origin:document.getElementById('i-origin').value.trim(),
+    fuel_type:document.getElementById('i-fuel').value,
+    inspection_result:document.getElementById('i-result').value,
+    inspection_notes:document.getElementById('i-notes').value.trim(),
+    inspection_fee:parseFloat(document.getElementById('i-fee').value)||null,
+    inspection_valid_until:document.getElementById('i-expiry').value,
+  },'✅ تم إرسال بيانات الفحص لقسم التسجيل');
+  closeModal('insp-modal');
+}
+
+function openBelModal(id) {
+  activePendingId = id;
+  const p = items.find(x=>x.id===id);
+  const vd = safeJSON(p?.vehicle_data);
+  document.getElementById('bel-veh-info').textContent =
+    `${vd.make||''} ${vd.model||''} ${vd.year||''} · الهيكل: ${vd.chassis_number||'—'} · المالك: ${p?.owner_name}`;
+  const d=new Date(); d.setFullYear(d.getFullYear()+1);
+  document.getElementById('b-expiry').value=d.toISOString().split('T')[0];
+  document.getElementById('bel-result').style.display='none';
+  document.getElementById('bel-modal').style.display='flex';
+}
+
+async function submitBel() {
+  const expiry = document.getElementById('b-expiry').value;
+  if (!expiry) return showAlert('تاريخ انتهاء البل مطلوب','error');
+  const res = await fetch('/api/v1/vehicles/step5/generate-plate',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      pending_id:activePendingId,
+      bel_number:document.getElementById('b-number').value.trim(),
+      bel_fee:parseFloat(document.getElementById('b-fee').value)||null,
+      bel_valid_until:expiry,
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('bel-result').style.display='block';
+    document.getElementById('bel-plate-num').textContent=data.data.plate_number;
+    showAlert(`✅ اللوحة: ${data.data.plate_number} — أُرسلت للمدير للاعتماد النهائي`,'success');
+    setTimeout(loadAll,2000);
+  } else showAlert(data.message||'خطأ','error');
+}
+
+async function finalApprove(id) {
+  await api('/api/v1/vehicles/step6/final-approval',{pending_id:id,decision:'approved'},'✅ اعتماد نهائي — أُرسل لقسم اللوحات');
+}
+async function finalReject(id) {
+  const r=prompt('سبب الرفض:'); if(!r) return;
+  await api('/api/v1/vehicles/step6/final-approval',{pending_id:id,decision:'rejected',reason:r},'❌ تم الرفض');
+}
+
+async function issuePlate(id) {
+  if (!confirm('تأكيد استلام 30 دينار وإصدار اللوحة؟')) return;
+  await api('/api/v1/vehicles/step7/issue-plate',{pending_id:id,fee_paid:30},'✅ تم إصدار اللوحة بنجاح');
+}
+
+// عرض PDF الطلب
+function viewPDF(id) {
+  window.open(`/vehicles/request-pdf/${id}`, '_blank');
+}
+
+async function api(url, body, successMsg) {
+  try {
+    const r = await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    if (d.success) { showAlert(successMsg,'success'); setTimeout(loadAll,1500); }
+    else showAlert(d.message||'خطأ','error');
+  } catch(e) { showAlert('❌ '+e.message,'error'); }
+}
+
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+function showAlert(msg,type){const el=document.getElementById('alert');el.className=`alert alert-${type==='error'?'error':'success'}`;el.textContent=msg;el.style.display='flex';if(type!=='success')setTimeout(()=>el.style.display='none',6000);}
+
+loadAll(); setInterval(loadAll,30000);
+</script>
+</body>
+</html>

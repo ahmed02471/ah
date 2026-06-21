@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إشعاراتي — نظام مرور سبها</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="with-sidebar">
+    
+    
+    
+    
+
+    <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+        <div class="page-wrapper">
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">إشعاراتي</h1>
+                    <p class="page-subtitle">جميع التنبيهات والإشعارات الخاصة بحسابك</p>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" onclick="markAllRead()">تحديد الكل كمقروء</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="notif-list" style="padding: 8px 0;">
+                    <div style="text-align:center;padding:32px;color:var(--text-3);">جارٍ التحميل...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadNotifications() {
+            const list = document.getElementById('notif-list');
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) throw new Error();
+                const notifs = data.data || [];
+                if (!notifs.length) {
+                    list.innerHTML = `<div class="empty-state" style="padding:60px;">
+                        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="empty-state-title">لا توجد إشعارات</span>
+                        <p style="font-size:.85rem;color:var(--text-3);">ستظهر هنا الإشعارات المتعلقة بمركباتك ومخالفاتك</p>
+                    </div>`;
+                    return;
+                }
+                list.innerHTML = notifs.map(n => `
+                    <div onclick="markRead(${n.id}, this)" style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read ? 'transparent' : 'var(--primary-light)'};transition:background .2s;">
+                        <div style="width:10px;height:10px;border-radius:50%;background:${n.is_read ? 'var(--border-2)' : 'var(--primary)'};margin-top:6px;flex-shrink:0;"></div>
+                        <div style="flex:1;">
+                            <p style="font-weight:${n.is_read ? '400' : '700'};color:var(--text);font-size:.9rem;">${n.message}</p>
+                            <p style="font-size:.78rem;color:var(--text-3);margin-top:4px;">${n.created_at ? new Date(n.created_at).toLocaleString('ar-LY') : ''}</p>
+                        </div>
+                    </div>`).join('');
+            } catch { list.innerHTML = `<div style="text-align:center;color:var(--danger);padding:32px;">خطأ في تحميل الإشعارات</div>`; }
+        }
+
+        async function markRead(id, el) {
+            const token = localStorage.getItem('auth_token');
+            await fetch(`/api/v1/notifications/${id}/read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            el.style.background = 'transparent';
+            el.querySelector('div').style.background = 'var(--border-2)';
+            el.querySelector('p').style.fontWeight = '400';
+        }
+
+        async function markAllRead() {
+            const token = localStorage.getItem('auth_token');
+            await fetch('/api/v1/notifications/read-all', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+            loadNotifications();
+        }
+
+        loadNotifications();
+    </script>
+</body>
+</html>

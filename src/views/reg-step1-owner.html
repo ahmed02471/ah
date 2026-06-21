@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل مركبة — الخطوة 1</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="/js/libya-cities.js"></script>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>تسجيل مركبة</span></div>
+      <h1 class="page-title">الخطوة 1 — التحقق من وثائق المالك</h1>
+      <p class="page-subtitle">قسم التسجيل · أدخل بيانات المالك من وثائقه الرسمية وأرسل طلباً للمدير</p>
+    </div>
+    <a href="/vehicles" class="btn btn-secondary">رجوع</a>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:16px;"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;">
+
+    <div class="card">
+      <div class="card-header">بيانات المالك</div>
+      <div class="card-body">
+
+        <!-- الصورة الشخصية -->
+        <div class="form-group">
+          <label class="form-label">الصورة الشخصية <span style="color:var(--danger)">*</span></label>
+          <div id="photo-preview-wrap" style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg);border:2px dashed var(--border);border-radius:10px;cursor:pointer;transition:border-color .2s;" onclick="document.getElementById('f_photo').click()">
+            <div id="photo-preview" style="width:70px;height:70px;border-radius:50%;background:var(--bg-2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;">👤</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-2);">اضغط لرفع الصورة</div>
+              <div style="font-size:11px;color:var(--text-4);margin-top:3px;">JPG أو PNG · الصورة ستظهر بوضوح في ملف المالك</div>
+            </div>
+          </div>
+          <input type="file" id="f_photo" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">الاسم الكامل <span style="color:var(--danger)">*</span></label>
+          <input class="form-input" id="f_name" placeholder="كما في البطاقة الشخصية">
+        </div>
+
+        <!-- الرقم الوطني أو الإداري -->
+        <div style="background:var(--info-bg);border:1px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--info);margin-bottom:8px;">🪪 رقم التعريف — أدخل أحدهما على الأقل</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">الرقم الوطني</label>
+              <input class="form-input" id="f_nid" placeholder="12 رقم" maxlength="12" inputmode="numeric" dir="ltr"
+                oninput="lookupByNid(this.value)">
+              <div id="nid-lookup-result" style="font-size:11px;margin-top:4px;min-height:16px;"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">الرقم الإداري</label>
+              <input class="form-input" id="f_admin_num" placeholder="الرقم الإداري" dir="ltr">
+              <p class="form-hint">بديل عن الرقم الوطني</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- البطاقة أو الجواز -->
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px;">📄 وثيقة الهوية — أدخل أحدهما على الأقل</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">رقم البطاقة الشخصية</label>
+              <input class="form-input" id="f_idcard" dir="ltr">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">رقم جواز السفر</label>
+              <input class="form-input" id="f_passport" dir="ltr">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">رخصة القيادة</label>
+            <input class="form-input" id="f_license" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input class="form-input" id="f_phone" inputmode="numeric" dir="ltr">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">المدينة <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="f_city" onchange="updateDistrict()">
+            <option value="">— اختر المدينة —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">الحي <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="f_district" disabled>
+            <option value="">— اختر الحي —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">تفاصيل إضافية (شارع / منزل)</label>
+          <input class="form-input" id="f_addr_details" placeholder="رقم المنزل أو الشارع...">
+        </div>
+
+        <!-- ربط حساب المواطن -->
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:4px;">
+          <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px;">🔗 ربط حساب المواطن (اختياري)</div>
+          <div style="font-size:11px;color:#166534;margin-bottom:8px;">إذا كان المواطن مسجّلاً في البوابة الإلكترونية، أدخل رقم مراجعته لربط المركبة تلقائياً بحسابه</div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">رقم مراجعة المواطن</label>
+            <input class="form-input" id="f_review_num" placeholder="مثال: 384729" maxlength="10" dir="ltr"
+              oninput="lookupCitizen(this.value)">
+            <div id="citizen-lookup-result" style="font-size:11px;margin-top:4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header">قائمة التحقق من الوثائق</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-3);margin-bottom:10px;">ضع علامة على كل وثيقة استلمتها:</p>
+          <label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="chk-item"> البطاقة الشخصية (أصل + صورة)</label>
+          <label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="chk-item"> شهادة الميلاد</label>
+          <label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="chk-item"> رخصة القيادة</label>
+          <label style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><input type="checkbox" class="chk-item"> الطلب الكتابي الرسمي</label>
+          <label style="display:flex;gap:10px;align-items:center;padding:8px 0;cursor:pointer;font-size:13px;"><input type="checkbox" class="chk-item"> وثيقة ملكية المركبة</label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">ملاحظات للمدير</label>
+            <textarea class="form-input" id="f_notes" rows="3" placeholder="أي ملاحظات..."></textarea>
+          </div>
+          <div class="alert alert-info" style="margin-bottom:12px;font-size:12px;">
+            ⚠️ لا يمكن تسجيل بيانات المركبة إلا بعد موافقة المدير
+          </div>
+          <button class="btn btn-primary btn-block" onclick="sendRequest()">
+            إرسال طلب رسمي للمدير ←
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+
+// تهيئة قوائم المدن
+document.addEventListener('DOMContentLoaded', () => {
+  initCityDistrict('f_city', 'f_district', 'سبها');
+});
+
+function updateDistrict() {
+  const city = document.getElementById('f_city').value;
+  const dist = document.getElementById('f_district');
+  const districts = LIBYA_CITIES[city] || [];
+  dist.innerHTML = '<option value="">— اختر الحي —</option>' +
+    districts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  dist.disabled = !city;
+}
+
+// ── بحث بالرقم الوطني ─────────────────────────────────────────
+let nidTimer;
+async function lookupByNid(val) {
+  const el = document.getElementById('nid-lookup-result');
+  el.textContent = '';
+  if (!val || val.length < 12) return;
+  clearTimeout(nidTimer);
+  nidTimer = setTimeout(async () => {
+    try {
+      el.textContent = '⏳ جارٍ البحث...';
+      el.style.color = 'var(--text-4)';
+      const res  = await fetch(`/api/v1/citizen/lookup?national_id=${val}`, {headers:{Authorization:'Bearer '+T}});
+      const data = await res.json();
+      if (data.success && data.data) {
+        el.style.color = 'var(--success)';
+        el.innerHTML = `✅ مسجّل في البوابة — <strong>${data.data.full_name}</strong>`;
+        fillFromCitizen(data.data, false); // لا تُلغي الحقول المُدخلة يدوياً
+        // تعبئة رقم المراجعة تلقائياً
+        const rv = document.getElementById('f_review_num');
+        if (rv && !rv.value && data.data.review_number)
+          rv.value = data.data.review_number;
+        document.getElementById('citizen-lookup-result').style.color = 'var(--success)';
+        document.getElementById('citizen-lookup-result').textContent =
+          `✅ رقم المراجعة: ${data.data.review_number||'—'}`;
+      } else {
+        el.style.color = 'var(--text-3)';
+        el.textContent = '⚪ غير مسجّل في البوابة الإلكترونية';
+      }
+    } catch(e) { el.textContent = ''; }
+  }, 700);
+}
+
+// ── تعبئة الحقول من بيانات المواطن ────────────────────────────
+function fillFromCitizen(d, overwrite = false) {
+  const fill = (id, val) => {
+    if (!val) return;
+    const el = document.getElementById(id);
+    if (el && (overwrite || !el.value.trim()))
+      el.value = val;
+  };
+  fill('f_name',  d.full_name);
+  fill('f_phone', d.phone);
+}
+
+// ── بحث عن المواطن برقم المراجعة ─────────────────────────────
+let lookupTimer;
+async function lookupCitizen(val) {
+  const el = document.getElementById('citizen-lookup-result');
+  if (!val || val.length < 5) { el.textContent = ''; return; }
+  clearTimeout(lookupTimer);
+  lookupTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch(`/api/v1/citizen/lookup?review=${val}`, {headers:{Authorization:'Bearer '+T}});
+      const data = await res.json();
+      if (data.success && data.data) {
+        el.style.color = 'var(--success)';
+        el.textContent = `✅ المواطن: ${data.data.full_name} (${data.data.national_id})`;
+        fillFromCitizen(data.data, false);
+        if (!document.getElementById('f_nid').value && data.data.national_id)
+          document.getElementById('f_nid').value = data.data.national_id;
+      } else {
+        el.style.color = 'var(--text-3)';
+        el.textContent = 'رقم المراجعة غير موجود في البوابة';
+      }
+    } catch(e) { el.textContent = ''; }
+  }, 600);
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('photo-preview');
+    prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+    document.getElementById('photo-preview-wrap').style.borderColor = 'var(--success)';
+    document.getElementById('photo-preview-wrap').style.borderStyle = 'solid';
+  };
+  reader.readAsDataURL(file);
+}
+
+function markInvalid(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.borderColor = 'var(--danger)'; el.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)'; }
+}
+function clearInvalid(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.borderColor = ''; el.style.boxShadow = ''; }
+}
+
+async function sendRequest() {
+  const name     = document.getElementById('f_name').value.trim();
+  const nid      = document.getElementById('f_nid').value.trim();
+  const adminNum = document.getElementById('f_admin_num').value.trim();
+  const idcard   = document.getElementById('f_idcard').value.trim();
+  const passport = document.getElementById('f_passport').value.trim();
+  const license  = document.getElementById('f_license').value.trim();
+  const phone    = document.getElementById('f_phone').value.trim();
+  const address  = getAddress('f_city','f_district','f_addr_details');
+  const notes    = document.getElementById('f_notes').value.trim();
+  const photo    = document.getElementById('f_photo').files[0];
+
+  // إعادة تعيين الحقول
+  ['f_name','f_nid','f_admin_num'].forEach(clearInvalid);
+
+  let hasError = false;
+
+  // التحقق من الصورة
+  if (!photo) {
+    document.getElementById('photo-preview-wrap').style.borderColor = 'var(--danger)';
+    showAlert('الصورة الشخصية مطلوبة', 'error'); return;
+  }
+
+  // التحقق من الاسم
+  if (!name) { markInvalid('f_name'); showAlert('الاسم الكامل مطلوب', 'error'); return; }
+
+  // الرقم الوطني أو الإداري (أحدهما مطلوب)
+  if (!nid && !adminNum) {
+    markInvalid('f_nid'); markInvalid('f_admin_num');
+    showAlert('يرجى إدخال الرقم الوطني أو الرقم الإداري', 'error'); return;
+  }
+  if (nid && (nid.length !== 12 || !/^\d+$/.test(nid))) {
+    markInvalid('f_nid');
+    showAlert('الرقم الوطني يجب أن يكون 12 رقماً', 'error'); return;
+  }
+
+  // البطاقة أو الجواز (أحدهما مطلوب)
+  if (!idcard && !passport) {
+    markInvalid('f_idcard'); markInvalid('f_passport');
+    showAlert('يرجى إدخال رقم البطاقة الشخصية أو جواز السفر', 'error'); return;
+  }
+
+  // التحقق من قائمة الوثائق
+  const checkboxes = document.querySelectorAll('.chk-item');
+  const allChecked = Array.from(checkboxes).every(c => c.checked);
+  if (!allChecked) {
+    showAlert('يرجى تأكيد استلام جميع الوثائق', 'error'); return;
+  }
+
+  // إرسال الطلب
+  showAlert('⏳ جارٍ الإرسال...', 'info');
+
+  try {
+    // تحويل الصورة لـ Base64 لإرسالها مع JSON
+    let photoBase64 = null;
+    if (photo) {
+      photoBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(photo);
+      });
+    }
+
+    const res = await fetch('/api/v1/vehicles/step1/request', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + T, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        citizen_national_id:    nid,
+        admin_number:           adminNum,
+        citizen_name:           name,
+        owner_id_card:          idcard,
+        owner_passport:         passport,
+        driving_license:        license,
+        owner_phone:            phone,
+        address,
+        notes,
+        photo_base64:           photoBase64,
+        citizen_review_number:  document.getElementById('f_review_num').value.trim()
+      })
+    });
+
+    if (res.status === 401) {
+      showAlert('انتهت جلستك — يرجى تسجيل الدخول مجدداً', 'error');
+      setTimeout(() => location.href = '/login', 2000);
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data.success) {
+      showAlert('✅ تم إرسال الطلب الرسمي للمدير — انتظر الموافقة', 'success');
+      setTimeout(() => location.href = '/dashboard', 2500);
+    } else {
+      showAlert(data.message || 'حدث خطأ في الإرسال', 'error');
+    }
+  } catch(err) {
+    showAlert('❌ خطأ في الاتصال: ' + err.message, 'error');
+    console.error('Step1 Error:', err);
+  }
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alert');
+  const cls = type === 'error' ? 'alert-error' : type === 'info' ? 'alert-info' : 'alert-success';
+  el.className = 'alert ' + cls;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  if (type !== 'success' && type !== 'info') {
+    setTimeout(() => el.style.display = 'none', 6000);
+  }
+}
+</script>
+</body>
+</html>

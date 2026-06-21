@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المواطنون — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>المواطنون</span></div>
+          <h1 class="page-title">إدارة المواطنين</h1>
+          <p class="page-subtitle">المواطنون المسجلون في النظام</p>
+        </div>
+        <div class="page-actions">
+          <a href="/admin/staff" class="btn btn-secondary">الموظفون</a>
+          <button class="btn btn-primary" onclick="openAdd()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            تسجيل مواطن
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="search-bar">
+          <div class="input-wrap search-input">
+            <span class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input class="form-input" id="q" placeholder="بحث بالاسم أو الرقم الوطني أو اسم المستخدم أو الهاتف...">
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>المواطن</th>
+                <th>الرقم الوطني</th>
+                <th>اسم المستخدم</th>
+                <th>الهاتف</th>
+                <th>المركبات</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr><td colspan="8"><div class="empty"><p>جارٍ التحميل...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="pg-info" id="pg-info">—</span>
+          <div class="pg-btns">
+            <button class="btn btn-secondary btn-sm" id="pg-prev" onclick="pg(-1)" disabled>السابق</button>
+            <button class="btn btn-secondary btn-sm" id="pg-next" onclick="pg(1)">التالي</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal تسجيل مواطن -->
+  <div id="modal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <span class="modal-title">تسجيل مواطن جديد</span>
+        <button class="modal-close" onclick="closeModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-err" class="alert alert-error" style="display:none;"></div>
+
+        <!-- نتيجة الإنشاء -->
+        <div id="success-box" style="display:none;">
+          <div class="alert alert-success">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div>
+              <div style="font-weight:700;margin-bottom:6px;">تم إنشاء الحساب بنجاح</div>
+              <div>اسم المستخدم: <strong id="res-username" style="font-family:monospace;"></strong></div>
+              <div style="margin-top:4px;">كلمة المرور المؤقتة: <strong id="res-password" style="font-family:monospace;background:var(--warning-bg);padding:2px 8px;border-radius:4px;"></strong></div>
+              <div style="margin-top:8px;font-size:12px;color:var(--text-3);">⚠️ سلّم هذه البيانات للمواطن الآن — لن تظهر مرة أخرى</div>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-block" onclick="closeModal()">إغلاق</button>
+        </div>
+
+        <div id="form-box">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">الاسم الكامل (عربي) <span class="req">*</span></label>
+              <input class="form-input" id="f-name" placeholder="محمد أحمد الورفلي">
+            </div>
+            <div class="form-group">
+              <label class="form-label">الاسم بالإنجليزي <span class="req">*</span></label>
+              <input class="form-input" id="f-name-en" placeholder="Mohamed Ahmed Warfali" dir="ltr">
+              <p class="form-hint">سيُستخدم لتوليد اسم المستخدم تلقائياً</p>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">الرقم الوطني <span class="req">*</span></label>
+              <input class="form-input" id="f-nid" placeholder="12 رقم" maxlength="12" inputmode="numeric">
+              <p class="form-hint">يبدأ بـ 1 (ذكر) أو 2 (أنثى)</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم الهاتف</label>
+              <input class="form-input" id="f-phone" placeholder="09XXXXXXXX" inputmode="numeric">
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">رقم البطاقة الشخصية</label>
+              <input class="form-input" id="f-idcard" placeholder="رقم البطاقة">
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم جواز السفر</label>
+              <input class="form-input" id="f-passport" placeholder="رقم الجواز">
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">رقم شهادة الميلاد</label>
+              <input class="form-input" id="f-birth" placeholder="رقم الشهادة">
+            </div>
+            <div class="form-group">
+              <label class="form-label">صورة المواطن</label>
+              <input type="file" id="f-photo" accept="image/*" class="form-input" style="padding:6px;">
+            </div>
+          </div>
+          <div class="alert alert-info" style="margin-top:4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            سيتولّد اسم المستخدم وكلمة المرور تلقائياً — سلّمها للمواطن على ورقة
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" id="form-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="save()">إنشاء الحساب</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+let page = 1, timer;
+const LIM = 15;
+
+async function load() {
+  const q = document.getElementById('q').value;
+  try {
+    const res  = await fetch(`/api/v1/admin/citizens?page=${page}&limit=${LIM}&q=${encodeURIComponent(q)}`,
+      { headers: { Authorization: 'Bearer ' + T } });
+    const data = await res.json();
+    if (!data.success) return;
+    const { users, total } = data.data;
+    document.getElementById('pg-info').textContent = `إجمالي: ${total} مواطن`;
+    document.getElementById('pg-prev').disabled = page === 1;
+    document.getElementById('pg-next').disabled = page * LIM >= total;
+
+    if (!users.length) {
+      document.getElementById('tbody').innerHTML = `<tr><td colspan="8"><div class="empty"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>لا يوجد مواطنون مسجلون</p></div></td></tr>`;
+      return;
+    }
+
+    document.getElementById('tbody').innerHTML = users.map((u, i) => `
+      <tr>
+        <td class="text-muted" style="font-size:12px;">${(page-1)*LIM+i+1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${u.photo_path
+              ? `<img src="${u.photo_path}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">`
+              : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#065f46,#059669);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;">${u.full_name[0]}</div>`}
+            <div>
+              <div style="font-weight:600;font-size:13px;">${u.full_name}</div>
+              <div class="text-muted" style="font-size:11px;">${u.gender||''}</div>
+            </div>
+          </div>
+        </td>
+        <td class="font-mono" style="font-size:12px;">${u.national_id}</td>
+        <td class="font-mono" style="font-size:12px;">${u.username}</td>
+        <td class="text-muted">${u.phone||'—'}</td>
+        <td>
+          <span class="badge badge-blue">${u.vehicle_count} مركبة</span>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="dot ${u.is_active?'dot-green':'dot-red'}"></span>
+            <span style="font-size:12px;">${u.is_active?'نشط':'معطّل'}</span>
+            ${u.must_change_password?'<span class="badge badge-warning" style="font-size:10px;">يجب تغيير كلمة المرور</span>':''}
+          </div>
+        </td>
+        <td>
+          <div class="action-row">
+            <button class="btn btn-ghost btn-sm" onclick="toggle(${u.id},'${u.full_name}',${u.is_active})">${u.is_active?'تعطيل':'تفعيل'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetPass(${u.id},'${u.full_name}')">تغيير كلمة المرور</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function toggle(id, name, active) {
+  if (!confirm(`هل تريد ${active?'تعطيل':'تفعيل'} حساب "${name}"؟`)) return;
+  const res = await fetch(`/api/v1/admin/users/${id}/toggle`, { method:'POST', headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) load();
+  else alert(data.message);
+}
+
+async function resetPass(id, name) {
+  if (!confirm(`إعادة تعيين كلمة مرور "${name}"؟`)) return;
+  const res = await fetch(`/api/v1/admin/users/${id}/reset-password`, { method:'POST', headers:{Authorization:'Bearer '+T,'Content-Type':'application/json'}, body:'{}' });
+  const data = await res.json();
+  if (data.success && data.data.temp_password) {
+    alert(`كلمة المرور الجديدة:\n${data.data.temp_password}\n\nسلّمها للمواطن على ورقة.`);
+  } else alert(data.message);
+}
+
+function openAdd() {
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('success-box').style.display='none';
+  document.getElementById('form-box').style.display='block';
+  document.getElementById('form-footer').style.display='flex';
+  document.getElementById('modal-err').style.display='none';
+}
+function closeModal() {
+  document.getElementById('modal').style.display='none';
+  load();
+}
+
+async function save() {
+  const fd = new FormData();
+  fd.append('national_id',      document.getElementById('f-nid').value.trim());
+  fd.append('full_name',        document.getElementById('f-name').value.trim());
+  fd.append('full_name_en',     document.getElementById('f-name-en').value.trim());
+  fd.append('phone',            document.getElementById('f-phone').value.trim());
+  fd.append('id_card_number',   document.getElementById('f-idcard').value.trim());
+  fd.append('passport_number',  document.getElementById('f-passport').value.trim());
+  fd.append('birth_cert_number',document.getElementById('f-birth').value.trim());
+  const photo = document.getElementById('f-photo').files[0];
+  if (photo) fd.append('photo', photo);
+
+  if (!fd.get('national_id')||!fd.get('full_name'))
+    return showModalErr('الرقم الوطني والاسم مطلوبان');
+
+  const res  = await fetch('/api/v1/admin/citizens', {
+    method:'POST', headers:{'Authorization':'Bearer '+T}, body: fd
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('form-box').style.display='none';
+    document.getElementById('form-footer').style.display='none';
+    document.getElementById('res-username').textContent = data.data.username;
+    document.getElementById('res-password').textContent = data.data.temp_password;
+    document.getElementById('success-box').style.display='block';
+  } else showModalErr(data.message);
+}
+
+function showModalErr(msg) {
+  const el = document.getElementById('modal-err');
+  el.textContent = msg; el.style.display = 'flex';
+}
+
+function pg(d) { page = Math.max(1, page+d); load(); }
+document.getElementById('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { page=1; load(); }, 400); });
+load();
+</script>
+</body>
+</html>

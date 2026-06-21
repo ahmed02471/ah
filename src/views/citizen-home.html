@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary:   #2563EB;
+      --primary-d: #1D4ED8;
+      --primary-l: #EFF6FF;
+      --accent:    #F59E0B;
+      --success:   #16A34A;
+      --success-l: #F0FDF4;
+      --danger:    #DC2626;
+      --danger-l:  #FEF2F2;
+      --warning:   #D97706;
+      --warning-l: #FFFBEB;
+      --bg:        #F1F5F9;
+      --bg2:       #E8EEF7;
+      --surface:   #FFFFFF;
+      --border:    #E2E8F0;
+      --text:      #0F172A;
+      --text2:     #475569;
+      --text3:     #94A3B8;
+      --tab-h:     68px;
+      --r:         14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; direction: rtl; overflow: hidden; }
+
+    .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+    .scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--tab-h) + 16px); }
+    .scroll-area::-webkit-scrollbar { display: none; }
+
+    /* ─── شريط التنقل السفلي ─── */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--tab-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      z-index: 99;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+      box-shadow: 0 -4px 20px rgba(15,23,42,0.06);
+    }
+
+    .tab {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; cursor: pointer; padding: 8px 4px;
+      color: var(--text3); transition: color .2s;
+      position: relative;
+    }
+
+    .tab.active { color: var(--primary); }
+
+    .tab.active::before {
+      content: '';
+      position: absolute; top: 0; left: 20%; right: 20%;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 0 0 4px 4px;
+    }
+
+    .tab-icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tab-icon svg { width: 22px; height: 22px; }
+    .tab-label { font-size: 10px; font-weight: 600; }
+
+    /* ─── الصفحات ─── */
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+
+    /* ─── رأس الصفحة ─── */
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .greeting-text { font-size: 20px; font-weight: 800; color: var(--text); }
+    .greeting-sub  { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .notif-btn {
+      width: 40px; height: 40px;
+      background: var(--surface);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      position: relative;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    }
+    .notif-btn svg { width: 20px; height: 20px; color: var(--text2); }
+    .notif-dot {
+      position: absolute; top: 8px; right: 8px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--danger); border: 2px solid var(--surface);
+      display: none;
+    }
+
+    /* ─── بطاقة المركبة ─── */
+    .vehicle-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563EB 60%, #3b82f6 100%);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vc-deco {
+      position: absolute;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      top: -60px; left: -40px;
+    }
+    .vc-deco2 {
+      position: absolute;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      bottom: -50px; right: 20px;
+    }
+
+    .vc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; position: relative; }
+
+    .vc-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; margin-bottom: 4px; }
+    .vc-plate { font-size: 26px; font-weight: 900; font-family: monospace; letter-spacing: 3px; color: #fff; }
+    .vc-country { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+    .vc-qr {
+      width: 76px; height: 76px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 5px;
+      flex-shrink: 0;
+    }
+
+    .vc-info { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 14px; position: relative; }
+
+    /* مؤشرات الصلاحية */
+    .validity-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; position: relative; }
+    .val-item {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 8px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+    .val-icon { font-size: 16px; margin-bottom: 3px; }
+    .val-label { font-size: 9px; color: rgba(255,255,255,0.6); margin-bottom: 3px; }
+    .val-date { font-size: 10px; font-weight: 700; }
+    .val-date.ok   { color: #86efac; }
+    .val-date.warn { color: #fde68a; }
+    .val-date.bad  { color: #fca5a5; }
+
+    /* ─── بطاقة المالك ─── */
+    .owner-card {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+    }
+    .owner-photo { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-l); flex-shrink: 0; }
+    .owner-photo-placeholder {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--primary-l);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .owner-name  { font-size: 15px; font-weight: 700; color: var(--text); }
+    .owner-nid   { font-size: 12px; color: var(--text3); font-family: monospace; direction: ltr; text-align: right; margin-top: 2px; }
+    .owner-phone { font-size: 12px; color: var(--text3); }
+
+    /* ─── رقم المراجعة ─── */
+    .review-card {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1.5px solid #BFDBFE;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+    }
+    .review-label { font-size: 11px; color: var(--text3); }
+    .review-num   { font-size: 22px; font-weight: 900; font-family: monospace; color: var(--primary); letter-spacing: 3px; }
+    .review-status { font-size: 10px; padding: 4px 10px; background: var(--primary-l); color: var(--primary); border-radius: 20px; font-weight: 600; }
+
+    /* ─── الخدمات السريعة ─── */
+    .section-title { font-size: 14px; font-weight: 700; color: var(--text2); margin-bottom: 10px; }
+
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+
+    .action-card {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 16px 12px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all .15s;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+    }
+    .action-card:active { transform: scale(.97); background: var(--bg); }
+
+    .action-icon-wrap {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .action-title { font-size: 12px; font-weight: 700; text-align: center; color: var(--text); }
+    .action-sub   { font-size: 10px; color: var(--text3); text-align: center; }
+
+    /* ─── قائمة المخالفات ─── */
+    .unpaid-banner {
+      background: var(--danger-l);
+      border: 1px solid #FECACA;
+      border-radius: var(--r);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .viol-item {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex; gap: 12px; align-items: center;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+    }
+    .viol-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .viol-body { flex: 1; }
+    .viol-type { font-size: 13px; font-weight: 700; color: var(--text); }
+    .viol-date { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .viol-right { text-align: left; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .viol-amount { font-size: 14px; font-weight: 800; color: var(--danger); }
+
+    .badge { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+    .badge-paid   { background: #DCFCE7; color: var(--success); }
+    .badge-unpaid { background: var(--danger-l); color: var(--danger); }
+    .badge-pending  { background: #FEF3C7; color: #B45309; }
+    .badge-approved { background: var(--danger-l); color: var(--danger); }
+    .badge-rejected { background: #E2E8F0; color: #64748B; }
+    .badge-cancelled{ background: #E2E8F0; color: #64748B; }
+    .badge-expired  { background: #E2E8F0; color: #64748B; }
+
+    .report-item { background: var(--surface); border-radius: var(--r); padding: 14px; margin-bottom: 10px; border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(15,23,42,0.04); }
+    .report-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .report-type { font-size: 13px; font-weight: 700; color: var(--text); }
+    .report-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .report-cancel-btn { margin-top: 10px; width: 100%; padding: 9px; border-radius: 8px; border: 1.5px solid var(--danger); background: #fff; color: var(--danger); font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .report-cancel-btn:hover { background: var(--danger-l); }
+
+    /* ─── الملف الشخصي ─── */
+    .profile-header {
+      text-align: center;
+      padding: 24px 16px 18px;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary);
+      margin: 0 auto 12px; display: block;
+    }
+    .profile-avatar-placeholder {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--primary-l);
+      border: 3px solid var(--border);
+      margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .profile-name  { font-size: 18px; font-weight: 800; color: var(--text); }
+    .profile-phone { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+    .qr-scan-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--primary-l);
+      color: var(--primary);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+      margin-top: 12px; cursor: pointer; border: none;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .profile-stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px; margin: 0 0 16px;
+    }
+    .prof-stat {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 14px 8px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .prof-stat-icon { font-size: 22px; margin-bottom: 6px; }
+    .prof-stat-label { font-size: 10px; color: var(--text3); font-weight: 600; }
+    .prof-stat-val   { font-size: 13px; font-weight: 800; color: var(--text); margin-top: 2px; font-family: monospace; }
+
+    .settings-card {
+      background: var(--surface);
+      border-radius: var(--r);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .settings-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .settings-item:last-child { border: none; }
+    .si-right  { display: flex; align-items: center; gap: 10px; }
+    .si-icon   { width: 32px; height: 32px; border-radius: 8px; background: var(--primary-l); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .si-label  { font-size: 13px; font-weight: 600; color: var(--text); }
+    .si-val    { font-size: 12px; color: var(--text3); }
+
+    .logout-btn {
+      display: block;
+      width: 100%;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: var(--danger-l);
+      border: 1px solid #FECACA;
+      border-radius: var(--r);
+      color: var(--danger);
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; text-align: center;
+    }
+
+    /* ─── حالة فارغة ─── */
+    .empty-state { text-align: center; padding: 44px 20px; color: var(--text3); }
+    .empty-icon  { font-size: 44px; margin-bottom: 12px; }
+    .empty-text  { font-size: 13px; line-height: 1.8; }
+
+    /* ─── QR Scanner Modal ─── */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,0.85);
+      z-index: 200; display: none; flex-direction: column;
+    }
+    .modal-bg.open { display: flex; }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px; padding-top: max(16px, env(safe-area-inset-top));
+    }
+    .modal-close {
+      background: rgba(255,255,255,0.1);
+      border: none; color: #fff;
+      width: 36px; height: 36px; border-radius: 50%;
+      font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-title-text { font-size: 15px; font-weight: 700; font-family: 'Cairo', sans-serif; color: #fff; }
+    #qr-reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 16px; overflow: hidden; }
+    .qr-result {
+      background: var(--surface);
+      border-radius: 16px;
+      margin: 16px;
+      padding: 14px;
+      font-size: 13px;
+      display: none;
+    }
+    .qr-result-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--success); }
+    .qr-info-row {
+      display: flex; justify-content: space-between;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .qr-info-row:last-child { border: none; }
+    .qi-label { color: var(--text2); }
+    .qi-val   { font-weight: 700; color: var(--text); }
+
+    /* ─── Bottom Modal ─── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,0.5);
+      z-index: 149; display: none;
+    }
+    .modal-overlay.open { display: block; }
+
+    .bottom-modal {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-radius: 22px 22px 0 0;
+      padding: 20px;
+      z-index: 150; display: none;
+      max-height: 85vh; overflow-y: auto;
+    }
+    .bottom-modal.open { display: block; }
+
+    .bm-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .bm-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; color: var(--text); }
+
+    .form-label {
+      display: block; font-size: 12px; color: var(--text2);
+      margin-bottom: 6px; font-weight: 700;
+    }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text); font-family: 'Cairo', sans-serif;
+      font-size: 14px; outline: none; margin-bottom: 12px;
+    }
+    .form-input:focus { border-color: var(--primary); }
+
+    .file-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1.5px dashed var(--border);
+      border-radius: 12px;
+      cursor: pointer; font-size: 12px; color: var(--text2);
+      margin-bottom: 12px;
+    }
+    .file-btn.ok { border-color: var(--success); color: var(--success); background: var(--success-l); }
+
+    .btn-submit {
+      width: 100%; padding: 14px;
+      background: var(--primary);
+      border: none; border-radius: 12px;
+      color: #fff; font-family: 'Cairo', sans-serif;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+    }
+    .btn-submit:hover { background: var(--primary-d); }
+
+    .btn-cancel {
+      width: 100%; padding: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text2); font-family: 'Cairo', sans-serif;
+      font-size: 13px; cursor: pointer; margin-top: 8px;
+    }
+
+    .warn-banner {
+      background: var(--warning-l);
+      border: 1px solid #FDE68A;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--warning);
+      margin-bottom: 12px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-family: 'Cairo', sans-serif;
+      z-index: 999;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.3);
+      white-space: nowrap;
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="scroll-area">
+
+    <!-- الرئيسية -->
+    <div class="page active" id="p-home">
+      <div class="top-bar">
+        <div>
+          <div class="greeting-text" id="greet-name">مرحباً 👋</div>
+          <div class="greeting-sub">بوابة مرور سبها</div>
+        </div>
+        <div class="notif-btn" onclick="switchTab('notifs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div class="notif-dot" id="notif-dot"></div>
+        </div>
+      </div>
+      <div id="home-content">
+        <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">جارٍ التحميل...</div></div>
+      </div>
+    </div>
+
+    <!-- المخالفات -->
+    <div class="page" id="p-viols">
+      <div class="top-bar"><div><div class="greeting-text">المخالفات</div><div class="greeting-sub">سجل مخالفاتك المرورية</div></div></div>
+      <div id="viols-content"><div class="empty-state"><div class="empty-icon">⏳</div></div></div>
+    </div>
+
+    <!-- الخدمات -->
+    <div class="page" id="p-reports">
+      <div class="top-bar"><div><div class="greeting-text">الخدمات</div><div class="greeting-sub">الإجراءات المتاحة</div></div></div>
+      <div class="actions-grid">
+        <div class="action-card" onclick="openReport()">
+          <div class="action-icon-wrap" style="background:#FEF2F2;">📋</div>
+          <div class="action-title">تقديم بلاغ</div>
+          <div class="action-sub">ضياع لوحة أو سرقة</div>
+        </div>
+        <div class="action-card" onclick="openSuspend()">
+          <div class="action-icon-wrap" style="background:#FFFBEB;">🔒</div>
+          <div class="action-title">تعليق للبيع</div>
+          <div class="action-sub">7 أيام مهلة</div>
+        </div>
+      </div>
+      <div id="reports-content"></div>
+    </div>
+
+    <!-- حسابي -->
+    <div class="page" id="p-account">
+      <div id="account-content"><div class="empty-state"><div class="empty-icon">⏳</div></div></div>
+    </div>
+
+  </div>
+
+  <!-- شريط التنقل -->
+  <div class="tab-bar">
+    <div class="tab active" id="tab-home" onclick="switchTab('home')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="tab-label">الرئيسية</div>
+    </div>
+    <div class="tab" id="tab-viols" onclick="switchTab('viols')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="tab-label">المخالفات</div>
+    </div>
+    <div class="tab" id="tab-reports" onclick="switchTab('reports')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="tab-label">الخدمات</div>
+    </div>
+    <div class="tab" id="tab-notifs" onclick="switchTab('notifs')">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div class="tab-label">حسابي</div>
+    </div>
+  </div>
+</div>
+
+<!-- QR Scanner Modal -->
+<div class="modal-bg" id="qr-modal">
+  <div class="modal-header">
+    <button class="modal-close" onclick="closeQR()">✕</button>
+    <div class="modal-title-text">مسح رمز QR</div>
+    <div style="width:36px;"></div>
+  </div>
+  <div id="qr-reader"></div>
+  <div class="qr-result" id="qr-result">
+    <div class="qr-result-title">✅ تم قراءة QR المركبة</div>
+    <div id="qr-result-data"></div>
+  </div>
+</div>
+
+<!-- Modal بلاغ -->
+<div class="modal-overlay" id="rep-overlay" onclick="closeReport()"></div>
+<div class="bottom-modal" id="rep-modal">
+  <div class="bm-handle"></div>
+  <div class="bm-title">📋 تقديم بلاغ</div>
+  <div id="rep-alert" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none;"></div>
+  <label class="form-label">نوع البلاغ</label>
+  <select class="form-input" id="rep-type">
+    <option value="lost_plate">ضياع لوحة</option>
+    <option value="stolen_vehicle">سرقة سيارة</option>
+  </select>
+  <label class="form-label">تفاصيل البلاغ</label>
+  <textarea class="form-input" id="rep-desc" rows="3" placeholder="اذكر التفاصيل..."></textarea>
+  <label class="form-label">صورة تقرير الشرطة *</label>
+  <label class="file-btn" id="police-btn" for="police-file">📎 <span id="police-txt">ارفق صورة التقرير</span></label>
+  <input type="file" id="police-file" accept="image/*,.pdf" style="display:none" onchange="fileOk('police-file','police-btn','police-txt')">
+  <div class="warn-banner">⚠️ لديك 7 أيام لإكمال الإجراءات بعد تقديم البلاغ</div>
+  <button class="btn-submit" onclick="submitReport()">إرسال البلاغ</button>
+  <button class="btn-cancel" onclick="closeReport()">إلغاء</button>
+</div>
+
+<!-- Modal تعليق للبيع -->
+<div class="modal-overlay" id="sus-overlay" onclick="closeSuspend()"></div>
+<div class="bottom-modal" id="sus-modal">
+  <div class="bm-handle"></div>
+  <div class="bm-title">🔒 تعليق المركبة للبيع</div>
+  <div id="sus-alert" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none;"></div>
+  <div class="warn-banner">⚠️ لديك 7 أيام فقط لإتمام نقل الملكية — بعدها تصدر مخالفة تلقائية</div>
+  <label class="form-label">صورة عقد البيع (اختياري)</label>
+  <label class="file-btn" id="contract-btn" for="contract-file">📄 <span id="contract-txt">ارفق صورة العقد</span></label>
+  <input type="file" id="contract-file" accept="image/*,.pdf" style="display:none" onchange="fileOk('contract-file','contract-btn','contract-txt')">
+  <button class="btn-submit" onclick="submitSuspend()">تأكيد التعليق</button>
+  <button class="btn-cancel" onclick="closeSuspend()">إلغاء</button>
+</div>
+
+<script>
+const T     = localStorage.getItem('auth_token');
+const uRole = localStorage.getItem('user_role');
+const uName = localStorage.getItem('user_name') || 'المواطن';
+
+if (!T || uRole !== 'CITIZEN') location.href = '/citizen';
+
+let D = null;
+let activeVid = null;
+let qrScanner = null;
+
+async function load() {
+  try {
+    const res = await fetch('/api/v1/citizen/home', { headers: { Authorization: 'Bearer ' + T } });
+    if (!res.ok) { logout(); return; }
+    const data = await res.json();
+    if (!data.success) { logout(); return; }
+    D = data.data;
+    renderHome();
+    renderViols();
+    renderAccount();
+    renderReports();
+  } catch(e) {
+    document.getElementById('home-content').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">${e.message}</div></div>`;
+  }
+}
+
+function expDays(d) {
+  if (!d) return null;
+  return Math.ceil((new Date(d) - new Date()) / 86400000);
+}
+function expClass(d) {
+  const n = expDays(d);
+  if (n === null) return 'bad';
+  return n < 0 ? 'bad' : n < 30 ? 'warn' : 'ok';
+}
+function expLabel(d) {
+  if (!d) return '—';
+  const n = expDays(d);
+  if (n < 0) return 'منتهٍ ❌';
+  if (n === 0) return 'اليوم ⚠️';
+  if (n < 30) return `${n} يوم ⚠️`;
+  const parts = d.split('-');
+  return `${parts[2]}/${parts[1]}`;
+}
+
+function renderHome() {
+  const c  = D.citizen || {};
+  const vs = D.vehicles || [];
+  let html = '';
+
+  document.getElementById('greet-name').textContent = `مرحباً، ${uName.split(' ')[0]} 👋`;
+
+  const notifUnread = (D.notifs || []).filter(n => !n.is_read).length;
+  if (notifUnread) document.getElementById('notif-dot').style.display = 'block';
+
+  if (c.review_number && !vs.length) {
+    html += `
+    <div class="review-card">
+      <div>
+        <div class="review-label">رقم المراجعة</div>
+        <div class="review-num">${c.review_number}</div>
+      </div>
+      <div class="review-status">قيد المراجعة</div>
+    </div>`;
+  }
+
+  if (!vs.length) {
+    html += `<div class="empty-state">
+      <div class="empty-icon">🚗</div>
+      <div class="empty-text">لا توجد مركبات مسجلة بعد<br><small style="color:var(--text3)">تواصل مع قسم التسجيل برقم مراجعتك</small></div>
+    </div>`;
+    document.getElementById('home-content').innerHTML = html;
+    return;
+  }
+
+  const v = vs[0];
+  activeVid = v.id;
+  const qrUrl = v.qr_token ? `http://localhost:3000/vehicles/qr/${v.qr_token}` : null;
+
+  html += `
+  <div class="owner-card">
+    ${v.photo_path
+      ? `<img src="${v.photo_path}" class="owner-photo" onerror="this.style.display='none'">`
+      : `<div class="owner-photo-placeholder">👤</div>`}
+    <div>
+      <div class="owner-name">${v.owner_name || uName}</div>
+      <div class="owner-nid">${v.owner_national_id || '—'}</div>
+      <div class="owner-phone">${v.owner_phone || ''}</div>
+    </div>
+  </div>
+
+  <div class="vehicle-card">
+    <div class="vc-deco"></div>
+    <div class="vc-deco2"></div>
+    <div class="vc-header">
+      <div>
+        <div class="vc-label">رقم اللوحة</div>
+        <div class="vc-plate">${v.plate_number || '—'}</div>
+        <div class="vc-country">Libya · مرور سبها</div>
+      </div>
+      <div class="vc-qr" id="qr-box-home"></div>
+    </div>
+    <div class="vc-info">${v.make||''} ${v.model||''} ${v.year||''} · ${v.color||''} · ${v.vehicle_type||''}</div>
+    <div class="validity-row">
+      <div class="val-item">
+        <div class="val-icon">🛡️</div>
+        <div class="val-label">التأمين</div>
+        <div class="val-date ${expClass(v.ins_expiry)}">${expLabel(v.ins_expiry)}</div>
+      </div>
+      <div class="val-item">
+        <div class="val-icon">📄</div>
+        <div class="val-label">البل</div>
+        <div class="val-date ${expClass(v.bel_expiry)}">${expLabel(v.bel_expiry)}</div>
+      </div>
+      <div class="val-item">
+        <div class="val-icon">🔧</div>
+        <div class="val-label">الفحص</div>
+        <div class="val-date ${expClass(v.insp_expiry)}">${expLabel(v.insp_expiry)}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">الخدمات السريعة</div>
+  <div class="actions-grid">
+    <div class="action-card" onclick="openQR()">
+      <div class="action-icon-wrap" style="background:var(--primary-l);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><path d="M23 7V1h-6"/><path d="M1 7V1h6"/><path d="M1 17v6h6"/><path d="M23 17v6h-6"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><rect x="14" y="14" width="3" height="3"/></svg>
+      </div>
+      <div class="action-title">مسح QR</div>
+      <div class="action-sub">قراءة مركبة بالكاميرا</div>
+    </div>
+    <div class="action-card" onclick="switchTab('reports')">
+      <div class="action-icon-wrap" style="background:var(--danger-l);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      </div>
+      <div class="action-title">تقديم بلاغ</div>
+      <div class="action-sub">ضياع أو سرقة</div>
+    </div>
+  </div>`;
+
+  document.getElementById('home-content').innerHTML = html;
+
+  if (qrUrl) {
+    try {
+      new QRCode(document.getElementById('qr-box-home'), {
+        text: qrUrl, width: 66, height: 66,
+        colorDark: '#1e3a8a', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) {}
+  }
+}
+
+function renderViols() {
+  const vl = D.violations || [];
+  const unpaid = vl.filter(v => v.status === 'unpaid');
+  let html = '';
+
+  if (unpaid.length) {
+    html += `<div class="unpaid-banner">⛔ لديك ${unpaid.length} مخالفة غير مدفوعة بقيمة إجمالية ${unpaid.reduce((s,v)=>s+(v.fine_amount||0),0)} دينار — ادفع حضورياً في مقر الإدارة</div>`;
+  }
+
+  if (!vl.length) {
+    html = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">لا توجد مخالفات</div></div>`;
+  } else {
+    html += vl.map(v => `
+    <div class="viol-item">
+      <div class="viol-dot" style="background:${v.status==='paid'?'var(--success)':'var(--danger)'};"></div>
+      <div class="viol-body">
+        <div class="viol-type">${v.type_name||v.description||'مخالفة'}</div>
+        <div class="viol-date">${(v.issued_at||'').split('T')[0]}</div>
+      </div>
+      <div class="viol-right">
+        <div class="viol-amount">${v.fine_amount||0} د.ل</div>
+        <span class="badge ${v.status==='paid'?'badge-paid':'badge-unpaid'}">${v.status==='paid'?'مدفوعة':'غير مدفوعة'}</span>
+      </div>
+    </div>`).join('');
+  }
+  document.getElementById('viols-content').innerHTML = html;
+}
+
+const REPORT_TYPE_LABEL = { lost_plate:'📋 ضياع لوحة', stolen_vehicle:'🚨 سرقة مركبة', sale_suspension:'🔒 تعليق للبيع' };
+const REPORT_STATUS_LABEL = { pending:'قيد المراجعة', approved:'مُفعَّل', rejected:'مرفوض', cancelled:'مُلغى', expired:'منتهي' };
+const REPORT_CANCEL_TEXT = {
+  lost_plate:      { confirm:'هل تم العثور على اللوحة وتريد إلغاء هذا البلاغ؟', btn:'✅ تم العثور على اللوحة — إلغاء البلاغ' },
+  stolen_vehicle:  { confirm:'هل تم العثور على المركبة وتريد إلغاء هذا البلاغ؟', btn:'✅ تم العثور على المركبة — إلغاء البلاغ' },
+  sale_suspension: { confirm:'هل تريد التراجع عن طلب نقل الملكية وإعادة تفعيل المركبة؟', btn:'إلغاء طلب نقل الملكية' },
+};
+
+function renderReports() {
+  const rl = D.reports || [];
+  const el = document.getElementById('reports-content');
+  if (!el) return;
+
+  if (!rl.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `<div class="section-title" style="margin-top:18px;">بلاغاتي وطلباتي</div>` + rl.map(r => {
+    const isLostStolen = ['lost_plate','stolen_vehicle'].includes(r.report_type);
+
+    let actionsHTML = '';
+    if (r.status === 'approved' && isLostStolen) {
+      if (r.resolution_type === 'reissue_requested') {
+        actionsHTML = `<div class="report-pending-note" style="margin-top:8px;font-size:12.5px;color:var(--text-3,#666);">⏳ طلب اللوحة البديلة قيد المعالجة من قسم اللوحات</div>`;
+      } else if (!r.resolution_type) {
+        actionsHTML = `
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <button class="report-cancel-btn" onclick="cancelMyReport(${r.id},'${r.report_type}')">${REPORT_CANCEL_TEXT[r.report_type].btn}</button>
+            <button class="report-cancel-btn" style="background:#fff7ed;color:#c2410c;border-color:#fdba74;" onclick="requestReissue(${r.id})">🏷️ ${r.report_type==='lost_plate'?'فقدت اللوحة فعلاً':'لم تُسترجَع المركبة'} — طلب لوحة بديلة (برسم)</button>
+          </div>`;
+      }
+    } else if (r.status === 'pending' && REPORT_CANCEL_TEXT[r.report_type]) {
+      actionsHTML = `<button class="report-cancel-btn" onclick="cancelMyReport(${r.id},'${r.report_type}')">${REPORT_CANCEL_TEXT[r.report_type].btn}</button>`;
+    }
+
+    const photoHTML = r.police_report_path
+      ? `<a href="${r.police_report_path}" target="_blank"><img src="${r.police_report_path}" alt="صورة البلاغ" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border, #e5e7eb);flex-shrink:0;"></a>`
+      : '';
+    return `
+    <div class="report-item">
+      <div class="report-top">
+        ${photoHTML}
+        <div>
+          <div class="report-type">${REPORT_TYPE_LABEL[r.report_type]||r.report_type}</div>
+          <div class="report-meta">${r.plate_number||''} · ${(r.created_at||'').split(' ')[0]}</div>
+        </div>
+        <span class="badge badge-${r.status}">${REPORT_STATUS_LABEL[r.status]||r.status}</span>
+      </div>
+      ${actionsHTML}
+    </div>`;
+  }).join('');
+}
+
+async function cancelMyReport(reportId, reportType) {
+  const info = REPORT_CANCEL_TEXT[reportType];
+  const isLostStolen = ['lost_plate','stolen_vehicle'].includes(reportType);
+  if (!confirm(info ? info.confirm : 'هل تريد إلغاء هذا البلاغ؟')) return;
+  try {
+    const res  = await fetch(`/api/v1/citizen/reports/${reportId}/cancel`, {
+      method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+T },
+      body: JSON.stringify(isLostStolen ? { resolution_type:'found' } : {})
+    });
+    const data = await res.json();
+    if (data.success) { showToast('✅ تم إلغاء البلاغ'); load(); }
+    else showToast('❌ ' + (data.message || 'تعذر إلغاء البلاغ'));
+  } catch(e) { showToast('❌ تعذر الاتصال بالخادم'); }
+}
+
+async function requestReissue(reportId) {
+  if (!confirm('سيتم تحويل طلبك لقسم اللوحات لاستخراج لوحة بديلة بنفس الرقم مقابل رسم يُحصَّل لديهم. هل تريد المتابعة؟')) return;
+  try {
+    const res  = await fetch(`/api/v1/citizen/reports/${reportId}/request-reissue`, {
+      method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+T },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) { showToast('✅ تم إرسال طلبك لقسم اللوحات'); load(); }
+    else showToast('❌ ' + (data.message || 'تعذر إرسال الطلب'));
+  } catch(e) { showToast('❌ تعذر الاتصال بالخادم'); }
+}
+
+function renderAccount() {
+  const c = D.citizen || {};
+  const v = D.vehicles?.[0] || {};
+  const unpaidCount = (D.violations||[]).filter(x=>x.status==='unpaid').length;
+
+  document.getElementById('account-content').innerHTML = `
+  <div class="profile-header">
+    ${c.photo_path
+      ? `<img src="${c.photo_path}" class="profile-avatar" onerror="this.style.display='none'">`
+      : `<div class="profile-avatar-placeholder">👤</div>`}
+    <div class="profile-name">${uName}</div>
+    <div class="profile-phone">${c.phone||v.owner_phone||'—'}</div>
+    <button class="qr-scan-btn" onclick="openQR()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7V1h-6"/><path d="M1 7V1h6"/><path d="M1 17v6h6"/><path d="M23 17v6h-6"/></svg>
+      مسح QR مركبة
+    </button>
+  </div>
+
+  <div class="profile-stats">
+    <div class="prof-stat">
+      <div class="prof-stat-icon">📋</div>
+      <div class="prof-stat-label">المراجعة</div>
+      <div class="prof-stat-val" style="color:var(--primary);font-size:11px;">${c.review_number||'—'}</div>
+    </div>
+    <div class="prof-stat">
+      <div class="prof-stat-icon">🚗</div>
+      <div class="prof-stat-label">اللوحة</div>
+      <div class="prof-stat-val" style="font-size:11px;">${v.plate_number||'—'}</div>
+    </div>
+    <div class="prof-stat" onclick="switchTab('viols')" style="cursor:pointer;">
+      <div class="prof-stat-icon">⚠️</div>
+      <div class="prof-stat-label">مخالفات</div>
+      <div class="prof-stat-val" style="color:${unpaidCount?'var(--danger)':'var(--success)'};">${unpaidCount} غير مدفوعة</div>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <div class="settings-item"><div class="si-right"><div class="si-icon">👤</div><span class="si-label">الاسم الكامل</span></div><div class="si-val">${uName}</div></div>
+    <div class="settings-item"><div class="si-right"><div class="si-icon">🪪</div><span class="si-label">الرقم الوطني</span></div><div class="si-val" style="font-family:monospace;">${c.national_id||v.owner_national_id||'—'}</div></div>
+    <div class="settings-item"><div class="si-right"><div class="si-icon">📱</div><span class="si-label">الهاتف</span></div><div class="si-val">${c.phone||v.owner_phone||'—'}</div></div>
+    <div class="settings-item"><div class="si-right"><div class="si-icon">📧</div><span class="si-label">البريد</span></div><div class="si-val" style="font-size:11px;">${c.email||'—'}</div></div>
+  </div>
+
+  <button class="logout-btn" onclick="logout()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    تسجيل الخروج
+  </button>`;
+}
+
+function switchTab(tab) {
+  const map = { 'notifs': 'account' };
+  const pageId = map[tab] || tab;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`p-${pageId}`).classList.add('active');
+  const tabEl = document.getElementById(`tab-${tab}`);
+  if (tabEl) tabEl.classList.add('active');
+}
+
+function openQR() {
+  document.getElementById('qr-modal').classList.add('open');
+  document.getElementById('qr-result').style.display = 'none';
+  qrScanner = new Html5Qrcode('qr-reader');
+  Html5Qrcode.getCameras().then(cams => {
+    const cam = cams.find(c => c.label.toLowerCase().includes('back')) || cams[cams.length-1];
+    qrScanner.start(cam.id, {fps:10,qrbox:{width:250,height:250}}, async (text) => {
+      await qrScanner.stop();
+      const token = text.includes('/') ? text.split('/').pop() : text;
+      fetchQrResult(token);
+    }, ()=>{});
+  }).catch(e => {
+    document.getElementById('qr-reader').innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center;">❌ لا يمكن فتح الكاميرا</div>`;
+  });
+}
+
+async function fetchQrResult(token) {
+  try {
+    const res  = await fetch(`/api/v1/vehicles/qr/${token}`, {headers:{Authorization:'Bearer '+T}});
+    const data = await res.json();
+    const v    = data.data;
+    if (!v) { document.getElementById('qr-result-data').innerHTML = '<p style="color:var(--danger)">المركبة غير مسجلة</p>'; }
+    else {
+      const alerts = (v.alerts||[]).map(a=>`<div style="color:${a.level==='danger'?'var(--danger)':'var(--warning)'};font-size:11px;margin-top:6px;">${a.msg}</div>`).join('');
+      document.getElementById('qr-result-data').innerHTML = `
+        <div class="qr-info-row"><span class="qi-label">اللوحة</span><span class="qi-val" style="font-family:monospace;">${v.plate_number}</span></div>
+        <div class="qr-info-row"><span class="qi-label">المالك</span><span class="qi-val">${v.owner_name||'—'}</span></div>
+        <div class="qr-info-row"><span class="qi-label">المركبة</span><span class="qi-val">${v.make||''} ${v.model||''}</span></div>
+        <div class="qr-info-row"><span class="qi-label">التأمين</span><span class="qi-val" style="color:${expClass(v.ins_expiry)==='ok'?'var(--success)':expClass(v.ins_expiry)==='warn'?'var(--warning)':'var(--danger)'};">${expLabel(v.ins_expiry)}</span></div>
+        ${alerts}`;
+    }
+    document.getElementById('qr-result').style.display = 'block';
+  } catch(e) {}
+}
+
+function closeQR() {
+  try { if(qrScanner) qrScanner.stop(); } catch(e){}
+  document.getElementById('qr-modal').classList.remove('open');
+  document.getElementById('qr-reader').innerHTML = '';
+}
+
+function openReport()  { document.getElementById('rep-modal').classList.add('open');  document.getElementById('rep-overlay').classList.add('open'); }
+function closeReport() { document.getElementById('rep-modal').classList.remove('open'); document.getElementById('rep-overlay').classList.remove('open'); }
+function openSuspend() { document.getElementById('sus-modal').classList.add('open');  document.getElementById('sus-overlay').classList.add('open'); }
+function closeSuspend(){ document.getElementById('sus-modal').classList.remove('open'); document.getElementById('sus-overlay').classList.remove('open'); }
+
+function fileOk(inputId, btnId, txtId) {
+  const f = document.getElementById(inputId).files[0];
+  if (f) { document.getElementById(btnId).classList.add('ok'); document.getElementById(txtId).textContent = '✅ ' + f.name; }
+}
+
+async function submitReport() {
+  if (!activeVid) return;
+  const file = document.getElementById('police-file').files[0];
+  if (!file) { document.getElementById('rep-alert').textContent='صورة تقرير الشرطة مطلوبة'; document.getElementById('rep-alert').style.display='block'; return; }
+  const fd = new FormData();
+  fd.append('vehicle_id', activeVid);
+  fd.append('report_type', document.getElementById('rep-type').value);
+  fd.append('description', document.getElementById('rep-desc').value);
+  fd.append('photo', file);
+  try {
+    const res  = await fetch('/api/v1/citizen/reports',{method:'POST',headers:{Authorization:'Bearer '+T},body:fd});
+    const data = await res.json();
+    if (data.success) { closeReport(); showToast('✅ تم استلام بلاغك — 7 أيام مهلة'); }
+    else { document.getElementById('rep-alert').textContent=data.message||'تعذر إرسال البلاغ'; document.getElementById('rep-alert').style.display='block'; }
+  } catch (e) {
+    document.getElementById('rep-alert').textContent='تعذر الاتصال بالخادم، حاول مرة أخرى'; document.getElementById('rep-alert').style.display='block';
+  }
+}
+
+async function submitSuspend() {
+  if (!activeVid) return;
+  const fd = new FormData();
+  fd.append('vehicle_id', activeVid);
+  const f = document.getElementById('contract-file').files[0];
+  if (f) fd.append('contract', f);
+  const res  = await fetch('/api/v1/citizen/suspend',{method:'POST',headers:{Authorization:'Bearer '+T},body:fd});
+  const data = await res.json();
+  if (data.success) { closeSuspend(); showToast('✅ تم التعليق — 7 أيام للبيع'); setTimeout(load,1000); }
+  else { document.getElementById('sus-alert').textContent=data.message; document.getElementById('sus-alert').style.display='block'; }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function logout() { localStorage.clear(); location.href = '/citizen'; }
+
+load();
+</script>
+</body>
+</html>

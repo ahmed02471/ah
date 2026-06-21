@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حق الامتياز — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div><script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>حق الامتياز</span></div>
+      <h1 class="page-title">إدارة حقوق الامتياز</h1>
+      <p class="page-subtitle">المادة 17 — حق الامتياز يمنع نقل ملكية المركبة</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حق امتياز</button>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+  <div id="list"><div class="card"><div class="card-body text-center text-muted">جارٍ التحميل...</div></div></div>
+
+</div></div>
+
+<!-- Modal إضافة -->
+<div id="add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:480px;border:1px solid var(--border);">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">⚠️ إضافة حق امتياز</h3>
+
+    <div class="form-group">
+      <label class="form-label">ابحث عن المركبة</label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="lien-plate-search" placeholder="رقم اللوحة..." dir="ltr" style="flex:1;" onkeydown="if(event.key==='Enter')searchLienVehicle()">
+        <button class="btn btn-secondary btn-sm" onclick="searchLienVehicle()">بحث</button>
+      </div>
+    </div>
+    <div id="lien-vehicle-found" style="display:none;background:var(--surface-3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;"></div>
+
+    <div class="form-group">
+      <label class="form-label">الجهة الدائنة <span class="req">*</span></label>
+      <input class="form-input" id="lien-holder" placeholder="اسم البنك أو الجهة">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">نوع الجهة</label>
+        <select class="form-select" id="lien-type">
+          <option value="بنك">بنك</option>
+          <option value="شركة تمويل">شركة تمويل</option>
+          <option value="جهة حكومية">جهة حكومية</option>
+          <option value="فرد">فرد</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">مبلغ الدين (د.ل)</label>
+        <input class="form-input" id="lien-amount" type="number" step="0.5">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">تاريخ الامتياز</label>
+      <input class="form-input" id="lien-date" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-input" id="lien-notes" rows="2"></textarea>
+    </div>
+
+    <div class="alert alert-warning" style="font-size:12px;margin-bottom:14px;">
+      ⚠️ بعد إضافة الامتياز لن يتمكن المالك من نقل الملكية حتى رفعه
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="addLien()">إضافة حق الامتياز</button>
+      <button class="btn btn-secondary" onclick="closeAddModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+let lienVehicle = null;
+
+async function load() {
+  const res  = await fetch('/api/v1/liens', {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success || !data.data.length) {
+    document.getElementById('list').innerHTML = `<div class="card"><div class="card-body text-center text-muted" style="padding:40px;">لا توجد امتيازات مسجلة</div></div>`;
+    return;
+  }
+  document.getElementById('list').innerHTML = `
+    <div class="card">
+      <table class="table">
+        <thead><tr>
+          <th>المركبة</th><th>الجهة الدائنة</th><th>النوع</th>
+          <th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th>
+        </tr></thead>
+        <tbody>
+          ${data.data.map(l=>`
+          <tr>
+            <td><strong class="font-mono">${l.plate_number||'—'}</strong><br><span style="font-size:11px;color:var(--text-3);">${l.make||''} ${l.model||''}</span></td>
+            <td>${l.lien_holder_name}</td>
+            <td><span class="badge badge-secondary">${l.lien_holder_type}</span></td>
+            <td>${l.lien_amount ? l.lien_amount.toLocaleString()+' د.ل' : '—'}</td>
+            <td style="font-size:12px;">${l.lien_date||l.created_at?.split(' ')[0]||'—'}</td>
+            <td>
+              ${l.is_active
+                ? `<span class="badge badge-danger">⚠️ نشط — يمنع النقل</span>`
+                : `<span class="badge badge-success">✅ مرفوع</span>`}
+            </td>
+            <td>
+              ${l.is_active
+                ? `<button class="btn btn-warning btn-sm" onclick="releaseLien(${l.id})">رفع الامتياز</button>`
+                : `<span style="font-size:11px;color:var(--text-4);">${l.release_date?.split(' ')[0]||''}</span>`}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function openAddModal() { lienVehicle=null; document.getElementById('add-modal').style.display='flex'; }
+function closeAddModal(){ document.getElementById('add-modal').style.display='none'; }
+
+async function searchLienVehicle() {
+  const q = document.getElementById('lien-plate-search').value.trim();
+  if (!q) return;
+  const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(q)}&limit=1`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (data.success && data.data.vehicles?.length) {
+    lienVehicle = data.data.vehicles[0];
+    document.getElementById('lien-vehicle-found').style.display = 'block';
+    document.getElementById('lien-vehicle-found').innerHTML =
+      `<strong>${lienVehicle.plate_number}</strong> — ${lienVehicle.make||''} ${lienVehicle.model||''} | المالك: ${lienVehicle.owner_name||'—'}`;
+  } else showAlert('المركبة غير موجودة','error');
+}
+
+async function addLien() {
+  if (!lienVehicle) { showAlert('ابحث عن المركبة أولاً','error'); return; }
+  const holder = document.getElementById('lien-holder').value.trim();
+  if (!holder) { showAlert('اسم الجهة الدائنة مطلوب','error'); return; }
+
+  const res  = await fetch('/api/v1/liens', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({
+      vehicle_id: lienVehicle.id,
+      lien_holder_name: holder,
+      lien_holder_type: document.getElementById('lien-type').value,
+      lien_amount: parseFloat(document.getElementById('lien-amount').value)||null,
+      lien_date:   document.getElementById('lien-date').value||null,
+      notes:       document.getElementById('lien-notes').value.trim(),
+    })
+  });
+  const data = await res.json();
+  if (data.success) { closeAddModal(); showAlert('✅ تم إضافة حق الامتياز بنجاح','success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+async function releaseLien(lienId) {
+  if (!confirm('هل تريد رفع حق الامتياز؟ (يعني السماح ببيع المركبة)')) return;
+  const res  = await fetch('/api/v1/liens/release', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ lien_id: lienId })
+  });
+  const data = await res.json();
+  if (data.success) { showAlert('✅ تم رفع حق الامتياز','success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+function showAlert(msg,type){const el=document.getElementById('alert');el.className=`alert alert-${type==='error'?'error':'success'}`;el.textContent=msg;el.style.display='flex';setTimeout(()=>el.style.display='none',5000);}
+load();
+</script>
+</body>
+</html>

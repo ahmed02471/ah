@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الدورية الثابتة — نظام مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <script src="/js/jsQR.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Cairo',sans-serif;background:#0a1628;color:#fff;direction:rtl;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+    .hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+    .hdr-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .hdr-right{display:flex;align-items:center;gap:12px;}
+    .hdr-btn{padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;cursor:pointer;font-size:12px;font-family:'Cairo',sans-serif;}
+    .hdr-btn:hover{background:rgba(255,255,255,.12);}
+    #clock{font-size:13px;font-family:monospace;color:rgba(255,255,255,.6);}
+
+    /* حالة النظام */
+    .sys-dot{width:8px;height:8px;border-radius:50%;background:#475569;}
+    .sys-dot.active{background:#6ee7b7;animation:blink 1.5s infinite;}
+    .sys-dot.scanning{background:#fbbf24;animation:blink .8s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    .main{display:flex;flex:1;overflow:hidden;}
+
+    /* ─── لوحة الكاميرا (يسار — صغيرة) ─── */
+    .cam-panel{width:300px;flex-shrink:0;background:rgba(0,0,0,.4);border-left:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;}
+    .cam-panel-hdr{padding:10px 12px;font-size:12px;font-weight:700;color:rgba(255,255,255,.6);border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between;}
+    .cam-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(100,116,139,.5);color:rgba(255,255,255,.5);}
+    .cam-badge.live{background:rgba(6,95,70,.7);color:#6ee7b7;}
+    .cam-badge.scanning{background:rgba(180,83,9,.7);color:#fcd34d;}
+
+    /* صندوق الكاميرا الصغير */
+    .cam-box{position:relative;background:#000;aspect-ratio:4/3;overflow:hidden;}
+    /* إصلاح لون Html5Qrcode في الدورية المتحركة */
+    #reader { background:#000 !important; }
+    #reader__dashboard { background:#0a1628 !important; border:none !important; }
+    #reader__scan_region { background:#000 !important; }
+    #cam-img{width:100%;height:100%;object-fit:cover;display:none;}
+    #cam-canvas{display:none;}
+    .cam-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.3);}
+    .cam-empty svg{width:36px;height:36px;opacity:.3;}
+    .cam-empty p{font-size:11px;}
+
+    /* مستطيل المسح */
+    .scan-overlay{position:absolute;inset:0;pointer-events:none;}
+    .scan-frame{position:absolute;top:20%;left:20%;right:20%;bottom:20%;border:2px solid rgba(59,130,246,.6);border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.3);}
+    .scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3b82f6,transparent);animation:scanline 2s ease-in-out infinite;}
+    @keyframes scanline{0%{top:20%}50%{top:79%}100%{top:20%}}
+
+    /* آخر QR مكتشف */
+    .last-qr{padding:8px 12px;font-size:10px;color:rgba(255,255,255,.35);border-top:1px solid rgba(255,255,255,.06);}
+    .last-qr span{color:rgba(255,255,255,.6);font-family:monospace;font-size:11px;}
+
+    /* سجل المسح */
+    .scan-log{flex:1;overflow-y:auto;}
+    .scan-log-hdr{padding:8px 12px;font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.5px;border-top:1px solid rgba(255,255,255,.07);}
+    .log-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;}
+    .log-item:hover{background:rgba(255,255,255,.04);}
+    .log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .log-dot.green{background:#059669;} .log-dot.yellow{background:#d97706;} .log-dot.red{background:#dc2626;}
+    .log-plate{font-size:11px;font-weight:700;font-family:monospace;}
+    .log-time{font-size:9px;color:rgba(255,255,255,.3);margin-right:auto;}
+
+    /* أدوات الكاميرا */
+    .cam-tools{padding:10px 12px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:6px;}
+    .cam-tool-btn{width:100%;padding:7px;border-radius:6px;font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .2s;}
+    .cam-tool-btn.primary{background:#1d4ed8;color:#fff;}
+    .cam-tool-btn.primary:hover{background:#1e40af;}
+    .cam-tool-btn.stop{background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.3);}
+    .cam-manual{display:flex;gap:6px;}
+    .cam-manual input{flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;font-family:'Cairo',sans-serif;font-size:11px;}
+    .cam-manual input::placeholder{color:rgba(255,255,255,.25);}
+    .cam-manual button{padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:12px;}
+
+    /* ─── لوحة النتائج (وسط — رئيسية) ─── */
+    .result-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+    /* حالة المركبة */
+    .vehicle-status{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);transition:all .4s;flex-shrink:0;}
+    .vehicle-status.idle  {background:rgba(255,255,255,.02);}
+    .vehicle-status.green {background:rgba(5,150,105,.12); border-bottom-color:rgba(5,150,105,.3);}
+    .vehicle-status.yellow{background:rgba(217,119,6,.12);  border-bottom-color:rgba(217,119,6,.3);}
+    .vehicle-status.red   {background:rgba(220,38,38,.12);  border-bottom-color:rgba(220,38,38,.3);}
+
+    .vs-top{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+    .status-lamp{width:16px;height:16px;border-radius:50%;flex-shrink:0;}
+    .status-lamp.idle  {background:#334155;}
+    .status-lamp.green {background:#059669;box-shadow:0 0 0 4px rgba(5,150,105,.2),0 0 20px rgba(5,150,105,.5);}
+    .status-lamp.yellow{background:#d97706;box-shadow:0 0 0 4px rgba(217,119,6,.2),0 0 20px rgba(217,119,6,.5);}
+    .status-lamp.red   {background:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.2),0 0 20px rgba(220,38,38,.5);animation:blink .8s infinite;}
+
+    .owner-ava{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;border:2px solid rgba(255,255,255,.2);}
+    .owner-img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid rgba(255,255,255,.2);}
+
+    .vs-plate{font-size:26px;font-weight:900;font-family:monospace;letter-spacing:1px;}
+    .vs-info {font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;}
+    .vs-time {margin-right:auto;text-align:left;font-size:11px;color:rgba(255,255,255,.4);}
+
+    /* تحذيرات */
+    .alerts-row{display:flex;flex-wrap:wrap;gap:6px;}
+    .alert-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
+    .alert-pill.danger{background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);color:#fca5a5;}
+    .alert-pill.warning{background:rgba(217,119,6,.2);border:1px solid rgba(217,119,6,.4);color:#fcd34d;}
+
+    /* بيانات المركبة */
+    .vehicle-data{flex:1;overflow-y:auto;padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start;}
+    .vd-card{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);}
+    .vd-label{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px;}
+    .vd-val{font-size:13px;font-weight:600;}
+    .vd-val.ok{color:#6ee7b7;}.vd-val.warn{color:#fcd34d;}.vd-val.bad{color:#fca5a5;}
+
+    /* شريط الإجراءات */
+    .action-bar{padding:12px 18px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;flex-shrink:0;background:rgba(0,0,0,.2);}
+    .action-btn{padding:10px 18px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:7px;transition:all .2s;}
+    .action-btn svg{width:16px;height:16px;}
+    .action-btn.viol{background:#dc2626;color:#fff;flex:1;}
+    .action-btn.viol:hover{background:#b91c1c;}
+    .action-btn.viol:disabled{opacity:.4;cursor:not-allowed;}
+    .action-btn.reset{background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);}
+    .action-btn.reset:hover{background:rgba(255,255,255,.12);}
+
+    .idle-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:.3;}
+    .idle-state svg{width:80px;height:80px;}
+    .idle-state p{font-size:14px;}
+
+    /* Modal مخالفة */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center;}
+    .modal-bg.open{display:flex;}
+    .modal{background:#0f2040;border:1px solid rgba(255,255,255,.1);border-radius:14px;width:480px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.1);}
+    .modal-title{font-size:14px;font-weight:700;color:#fca5a5;}
+    .modal-close{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:20px;line-height:1;}
+    .modal-body{padding:16px 18px;}
+    .modal-label{font-size:11px;color:rgba(255,255,255,.4);margin-bottom:5px;margin-top:10px;}
+    .modal-select,.modal-input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;font-family:'Cairo',sans-serif;font-size:13px;}
+    .modal-fine{font-size:22px;font-weight:900;color:#fca5a5;margin:8px 0;}
+    .modal-footer{display:flex;gap:8px;padding:12px 18px;border-top:1px solid rgba(255,255,255,.1);}
+    .btn-submit{flex:1;padding:11px;background:#dc2626;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;}
+    .btn-cancel{padding:11px 16px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12);border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;}
+
+    .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;animation:toast-in .3s ease;}
+    @keyframes toast-in{from{top:-40px;opacity:0}to{top:16px;opacity:1}}
+
+    /* ── زر التبديل على الموبايل ── */
+    .mob-tabs { display:none; }
+
+    @media (max-width: 768px) {
+      body { height:100dvh; overflow:hidden; }
+
+      .hdr { padding:8px 10px; }
+      .hdr-title { font-size:12px; }
+      .hdr-right { gap:6px; }
+      .hdr-btn { padding:5px 8px; font-size:11px; }
+      #clock { display:none; }
+
+      /* شريط التبديل */
+      .mob-tabs {
+        display:flex;
+        background:rgba(255,255,255,.06);
+        border-bottom:1px solid rgba(255,255,255,.08);
+        flex-shrink:0;
+      }
+      .mob-tab {
+        flex:1; padding:10px; text-align:center;
+        font-size:12px; font-weight:700; color:rgba(255,255,255,.45);
+        cursor:pointer; border-bottom:2px solid transparent;
+        transition:all .2s;
+      }
+      .mob-tab.active { color:#fff; border-bottom-color:#3b82f6; background:rgba(59,130,246,.1); }
+
+      /* اللوحات */
+      .main { flex-direction:column; overflow:hidden; }
+
+      .cam-panel {
+        width:100%; flex-shrink:0;
+        border-left:none; border-bottom:1px solid rgba(255,255,255,.08);
+        display:none; /* مخفية افتراضياً */
+        flex-direction:column;
+        max-height:calc(100dvh - 110px);
+      }
+      .cam-panel.mob-active { display:flex; }
+
+      .result-panel {
+        display:none;
+        flex:1; overflow:hidden;
+      }
+      .result-panel.mob-active { display:flex; }
+
+      /* حجم صندوق الكاميرا */
+      .cam-box { aspect-ratio:16/9; }
+
+      /* شبكة بيانات المركبة */
+      .vehicle-data { grid-template-columns:1fr 1fr; padding:10px; gap:8px; }
+
+      /* شريط الإجراءات */
+      .action-bar { padding:8px 12px; gap:8px; }
+      .action-btn { padding:9px 12px; font-size:12px; }
+
+      /* Modal */
+      .modal { width:calc(100vw - 24px); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hdr">
+    <div class="hdr-title">
+      <div class="sys-dot" id="sys-dot"></div>
+      <span>نقطة تفتيش ثابتة — مرور سبها</span>
+      <span id="qr-status" style="font-size:10px;color:rgba(255,255,255,.3);font-weight:400;">جارٍ التهيئة...</span>
+    </div>
+    <div class="hdr-right">
+      <span id="clock"></span>
+      <button class="hdr-btn" id="cam-settings-btn" onclick="location.href='/admin/camera'">⚙️ إعدادات الكاميرا</button>
+      <button class="hdr-btn" onclick="location.href='/dashboard'">الرئيسية</button>
+    </div>
+  </div>
+
+  <!-- شريط تبويب الموبايل -->
+  <div class="mob-tabs">
+    <div class="mob-tab" id="mob-tab-result" onclick="mobSwitch('result')">📋 النتائج</div>
+    <div class="mob-tab active" id="mob-tab-cam" onclick="mobSwitch('cam')">📷 الكاميرا</div>
+  </div>
+
+  <div class="main">
+
+    <!-- ─── لوحة الكاميرا (يسار) ─── -->
+    <div class="cam-panel mob-active" id="cam-panel">
+      <div class="cam-panel-hdr">
+        📷 الكاميرا IP
+        <span class="cam-badge" id="cam-badge">غير متصل</span>
+      </div>
+
+      <!-- صورة الكاميرا الصغيرة -->
+      <div class="cam-box">
+        <img id="cam-img" alt="كاميرا">
+        <canvas id="cam-canvas"></canvas>
+
+        <div class="cam-empty" id="cam-empty">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p>الكاميرا غير متصلة</p>
+        </div>
+
+        <!-- مستطيل المسح -->
+        <div class="scan-overlay" id="scan-overlay" style="display:none;">
+          <div class="scan-frame"></div>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+
+      <!-- آخر QR مكتشف -->
+      <div class="last-qr" id="last-qr-div" style="display:none;">
+        آخر QR: <span id="last-qr-val"></span>
+      </div>
+
+      <!-- سجل المسح -->
+      <div class="scan-log-hdr">سجل المسح اليوم</div>
+      <div class="scan-log" id="scan-log">
+        <div style="padding:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.2);">لا توجد مسحات بعد</div>
+      </div>
+
+      <!-- أدوات -->
+      <div class="cam-tools">
+        <div class="cam-manual">
+          <input id="manual-input" placeholder="رقم اللوحة أو QR يدوياً..." dir="ltr" onkeydown="if(event.key==='Enter')manualSearch()">
+          <button onclick="manualSearch()" title="بحث">🔍</button>
+        </div>
+        <button class="cam-tool-btn primary" id="start-btn" onclick="startCamera()">📡 بدء مسح الكاميرا</button>
+        <button class="cam-tool-btn stop" id="stop-btn" onclick="stopCamera()" style="display:none;">⏹ إيقاف المسح</button>
+      </div>
+    </div>
+
+    <!-- ─── لوحة النتائج (وسط رئيسية) ─── -->
+    <div class="result-panel" id="result-panel">
+
+      <!-- حالة المركبة الحالية -->
+      <div class="vehicle-status idle" id="vehicle-status">
+        <div class="vs-top">
+          <div class="status-lamp idle" id="status-lamp"></div>
+          <div class="owner-ava" id="owner-ava" style="display:none;"></div>
+          <img id="owner-img" class="owner-img" style="display:none;" src="">
+          <div style="flex:1;">
+            <div class="vs-plate" id="vs-plate">في انتظار مسح QR...</div>
+            <div class="vs-info"  id="vs-info">وجّه الكاميرا نحو ملصق QR على المركبة</div>
+          </div>
+          <div class="vs-time" id="vs-time"></div>
+        </div>
+        <div class="alerts-row" id="alerts-row"></div>
+      </div>
+
+      <!-- بيانات المركبة -->
+      <div id="vehicle-content" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="idle-state" id="idle-state">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width=".8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z"/></svg>
+          <p>في انتظار مسح رمز QR من الكاميرا</p>
+        </div>
+        <div class="vehicle-data" id="vehicle-data" style="display:none;"></div>
+      </div>
+
+      <!-- أزرار الإجراءات -->
+      <div class="action-bar">
+        <button class="action-btn viol" id="viol-btn" onclick="openViolModal()" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          تحرير مخالفة
+        </button>
+        <button class="action-btn reset" onclick="resetDisplay()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          مسح جديد
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal المخالفة -->
+  <div class="modal-bg" id="viol-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <span class="modal-title">⚠️ تحرير مخالفة مرورية</span>
+        <button class="modal-close" onclick="closeViolModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-veh-summary" style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:8px;"></div>
+        <div class="modal-label">نوع المخالفة *</div>
+        <select class="modal-select" id="vt-select" onchange="updateFine()">
+          <option value="">— اختر المخالفة —</option>
+        </select>
+        <div class="modal-fine" id="fine-display">—</div>
+        <div class="modal-label">موقع المخالفة</div>
+        <input class="modal-input" id="viol-location" placeholder="نقطة التفتيش / الموقع...">
+        <div class="modal-label">ملاحظات (للمخالفة الاستثنائية)</div>
+        <input class="modal-input" id="viol-desc" placeholder="وصف المخالفة إن لم تكن في القائمة...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn-submit" onclick="submitViol()">تسجيل المخالفة</button>
+        <button class="btn-cancel" onclick="closeViolModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+// الضابط الميداني لا يملك صلاحية إضافة/تعديل إعدادات الكاميرا
+if (localStorage.getItem('user_role') === 'OFFICER') {
+  const csBtn = document.getElementById('cam-settings-btn');
+  if (csBtn) csBtn.style.display = 'none';
+}
+let current = null;
+let vtypes  = [];
+let camInterval = null;
+let qrInterval  = null;
+let lastQrCode  = '';
+let scanLog     = [];
+const today     = new Date().toISOString().split('T')[0];
+
+// ── الساعة ────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('ar-LY',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// ── تحميل أنواع المخالفات ─────────────────────────────────────────
+async function loadVtypes() {
+  const res  = await fetch('/api/v1/admin/violation-types', { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) {
+    vtypes = data.data;
+    const sel = document.getElementById('vt-select');
+    vtypes.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v.id; o.dataset.fine = v.fine_amount;
+      o.textContent = `${v.name_ar} — ${v.fine_amount} د.ل`;
+      sel.appendChild(o);
+    });
+    const exc = document.createElement('option');
+    exc.value = 'exceptional'; exc.textContent = '⚠️ مخالفة استثنائية';
+    sel.appendChild(exc);
+  }
+}
+
+// ── بدء الكاميرا ──────────────────────────────────────────────────
+async function startCamera() {
+  // تحقق من الإعدادات
+  const res  = await fetch('/api/v1/camera/settings', { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success || !data.data) {
+    toast('❌ لم يتم ضبط إعدادات الكاميرا — اذهب لإعدادات الكاميرا أولاً', 'red');
+    return;
+  }
+
+  document.getElementById('cam-empty').style.display = 'none';
+  document.getElementById('cam-img').style.display   = 'block';
+  document.getElementById('scan-overlay').style.display = 'block';
+  document.getElementById('start-btn').style.display = 'none';
+  document.getElementById('stop-btn').style.display  = 'block';
+  document.getElementById('cam-badge').className     = 'cam-badge live';
+  document.getElementById('cam-badge').textContent   = '● مباشر';
+  document.getElementById('sys-dot').className       = 'sys-dot active';
+  document.getElementById('qr-status').textContent   = 'جارٍ المسح...';
+
+  const img = document.getElementById('cam-img');
+  const canvas = document.getElementById('cam-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // كل إطار = صورة JPEG منفصلة عبر fetch (الطريقة الموثوقة الوحيدة لقراءة QR بشكل صحيح من Canvas)
+  // ملاحظة: تجربة بث MJPEG مباشر (img.src مستمر) كانت أسرع بصرياً لكنها أعطت Canvas إطاراً
+  // مجمَّداً قديماً عند القراءة في Chrome — لذلك أُعيد العمل لهذه الطريقة، مع تسريع المصادقة
+  // في الخادم (cameraController.js) بدل تغيير طريقة جلب الإطار.
+  let errCount = 0;
+
+  camInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/v1/camera/snapshot?t=${Date.now()}`, {
+        headers:{Authorization:'Bearer '+T}
+      });
+
+      if (!res.ok) {
+        errCount++;
+        if (errCount > 5) {
+          toast('❌ انقطع الاتصال بالكاميرا', 'red');
+          stopCamera();
+        }
+        return;
+      }
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const oldSrc = img.src;
+
+      // انتظار تحميل الصورة قبل قراءة QR
+      await new Promise((resolve) => {
+        img.onload = async () => {
+          if (oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
+          errCount = 0;
+
+          // قراءة QR من الصورة
+          try {
+            canvas.width  = img.naturalWidth  || 640;
+            canvas.height = img.naturalHeight || 480;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            window.__qrAttempts = (window.__qrAttempts||0) + 1;
+            if (window.__qrAttempts % 5 === 1) {
+              console.log('[QR debug] محاولة #' + window.__qrAttempts + ' — حجم الصورة:', canvas.width + 'x' + canvas.height, '— jsQR محمّل:', typeof jsQR !== 'undefined');
+            }
+
+            if (typeof jsQR !== 'undefined') {
+              const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'attemptBoth'
+              });
+              if (window.__qrAttempts % 5 === 1) {
+                console.log('[QR debug] نتيجة jsQR:', code ? ('وُجد: ' + code.data.substring(0,30)) : 'لم يُعثر على QR');
+              }
+              if (code && code.data && code.data !== lastQrCode) {
+                lastQrCode = code.data;
+                document.getElementById('last-qr-div').style.display = 'block';
+                document.getElementById('last-qr-val').textContent = code.data.substring(0,24)+'...';
+                document.getElementById('sys-dot').className = 'sys-dot scanning';
+                document.getElementById('cam-badge').className = 'cam-badge scanning';
+                document.getElementById('cam-badge').textContent = '🔍 QR مكتشف';
+                document.getElementById('qr-status').textContent = 'تم اكتشاف QR — جارٍ البحث...';
+                await fetchByQr(code.data);
+                setTimeout(()=>{ lastQrCode = ''; }, 8000);
+              }
+            }
+          } catch(qrErr) { console.error('[QR debug] خطأ أثناء القراءة:', qrErr); }
+          resolve();
+        };
+        img.onerror = () => { resolve(); };
+        img.src = url;
+      });
+
+    } catch(e) {
+      errCount++;
+    }
+  }, 800);
+}
+
+function stopCamera() {
+  if (camInterval) clearInterval(camInterval);
+  camInterval = null;
+  lastQrCode  = '';
+  const img = document.getElementById('cam-img');
+  img.onerror = null;
+  if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+  img.src = ''; img.style.display = 'none';
+  document.getElementById('cam-empty').style.display   = 'flex';
+  document.getElementById('scan-overlay').style.display = 'none';
+  document.getElementById('start-btn').style.display   = 'block';
+  document.getElementById('stop-btn').style.display    = 'none';
+  document.getElementById('cam-badge').className       = 'cam-badge';
+  document.getElementById('cam-badge').textContent     = 'متوقف';
+  document.getElementById('sys-dot').className         = 'sys-dot';
+  document.getElementById('qr-status').textContent     = 'متوقف';
+}
+
+// ── البحث بـ QR ───────────────────────────────────────────────────
+async function fetchByQr(raw) {
+  // استخراج التوكن من الرابط أو النص المباشر
+  const token = raw.includes('/') ? raw.split('/').pop() : raw;
+  try {
+    const res  = await fetch(`/api/v1/vehicles/qr/${token}`, { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (data.success) {
+      showVehicle(data.data);
+      document.getElementById('sys-dot').className = 'sys-dot active';
+      document.getElementById('cam-badge').className = 'cam-badge live';
+      document.getElementById('cam-badge').textContent = '● مباشر';
+      document.getElementById('qr-status').textContent = `✅ ${data.data.plate_number}`;
+
+      // إعادة ضبط lastQrCode بعد 10 ثوانٍ للسماح بمسح نفس المركبة مجدداً
+      setTimeout(() => { lastQrCode = ''; }, 10000);
+    } else {
+      toast('QR غير مسجل في النظام', 'red');
+      document.getElementById('qr-status').textContent = '❌ QR غير صالح';
+      setTimeout(() => { lastQrCode = ''; document.getElementById('qr-status').textContent = 'جارٍ المسح...'; }, 3000);
+    }
+  } catch(e) {
+    toast('❌ خطأ في الاتصال بالخادم', 'red');
+  }
+}
+
+// ── البحث اليدوي ─────────────────────────────────────────────────
+async function manualSearch() {
+  const q = document.getElementById('manual-input').value.trim();
+  if (!q) return;
+
+  // محاولة كـ QR token مباشر
+  if (q.length >= 20 && !/\s/.test(q)) {
+    await fetchByQr(q);
+    return;
+  }
+
+  // البحث برقم اللوحة
+  try {
+    const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(q)}&limit=1`, { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (data.success && data.data.vehicles?.length) {
+      await fetchByQr(data.data.vehicles[0].qr_token);
+    } else {
+      toast('❌ لم يتم العثور على مركبة: ' + q, 'red');
+    }
+  } catch(e) { toast('❌ خطأ في الاتصال', 'red'); }
+}
+
+// ── عرض بيانات المركبة ───────────────────────────────────────────
+function showVehicle(v) {
+  current = v;
+  const alerts   = v.alerts || [];
+  const hasDanger = alerts.some(a => a.level === 'danger');
+  const isYellow  = v.status === 'suspended' && !hasDanger;
+  const colorClass = hasDanger ? 'red' : isYellow ? 'yellow' : 'green';
+  const now = new Date().toLocaleTimeString('ar-LY',{hour:'2-digit',minute:'2-digit'});
+
+  // تحديث شريط الحالة
+  ['vehicle-status','status-lamp'].forEach(id => {
+    document.getElementById(id).className = id.replace('-',' ').includes('status') ?
+      `vehicle-status ${colorClass}` : `status-lamp ${colorClass}`;
+  });
+
+  // صورة المالك
+  if (v.owner_photo) {
+    document.getElementById('owner-img').src = v.owner_photo;
+    document.getElementById('owner-img').style.display = 'block';
+    document.getElementById('owner-ava').style.display = 'none';
+  } else {
+    document.getElementById('owner-ava').textContent = (v.owner_name||'؟')[0];
+    document.getElementById('owner-ava').style.display = 'flex';
+    document.getElementById('owner-img').style.display = 'none';
+  }
+
+  document.getElementById('vs-plate').textContent = v.plate_number;
+  document.getElementById('vs-info').textContent  = `${v.make||''} ${v.model||''} ${v.year||''} — ${v.owner_name||'—'}`;
+  document.getElementById('vs-time').textContent  = now;
+
+  // التحذيرات
+  document.getElementById('alerts-row').innerHTML = alerts.map(a =>
+    `<span class="alert-pill ${a.level}">${a.level==='danger'?'⛔':'⚠️'} ${a.msg}</span>`
+  ).join('') || `<span class="alert-pill" style="background:rgba(5,150,105,.2);border:1px solid rgba(5,150,105,.4);color:#6ee7b7;">✅ لا توجد مشاكل</span>`;
+
+  // بيانات تفصيلية
+  const expColor = d => { if(!d)return'bad'; const n=Math.ceil((new Date(d)-new Date())/86400000); return n>30?'ok':n>0?'warn':'bad'; };
+
+  document.getElementById('idle-state').style.display = 'none';
+  document.getElementById('vehicle-data').style.display = 'grid';
+  document.getElementById('vehicle-data').innerHTML = [
+    ['المالك',         v.owner_name||'—',      ''],
+    ['الرقم الوطني',   v.owner_national_id||'—',''],
+    ['رقم الهوية',     v.owner_id_card||'—',   ''],
+    ['رخصة القيادة',   v.driving_license||'—', ''],
+    ['رقم الهيكل',     v.chassis_number||'—',  ''],
+    ['نوع المركبة',    v.vehicle_type||'—',    ''],
+    ['التأمين حتى',    v.ins_expiry||'—',      expColor(v.ins_expiry)],
+    ['البل حتى',       v.bel_expiry||'—',      expColor(v.bel_expiry)],
+    ['الفحص حتى',      v.insp_expiry||'—',     expColor(v.insp_expiry)],
+  ].map(([lbl,val,cls]) => `
+    <div class="vd-card">
+      <div class="vd-label">${lbl}</div>
+      <div class="vd-val ${cls}">${val}</div>
+    </div>`).join('');
+
+  document.getElementById('viol-btn').disabled = false;
+
+  // على الموبايل: انتقل تلقائياً لتبويب النتائج
+  if (window.innerWidth <= 768) mobSwitch('result');
+
+  // إضافة للسجل
+  addToLog(v, colorClass, now);
+}
+
+function addToLog(v, color, time) {
+  scanLog.unshift({ plate:v.plate_number, color, time, id:v.id, token:v.qr_token });
+  const log = document.getElementById('scan-log');
+  log.innerHTML = scanLog.slice(0,30).map(item => `
+    <div class="log-item" onclick="fetchByQr('${item.token}')">
+      <span class="log-dot ${item.color}"></span>
+      <span class="log-plate">${item.plate}</span>
+      <span class="log-time">${item.time}</span>
+    </div>`).join('');
+}
+
+function resetDisplay() {
+  current = null; lastQrCode = '';
+  document.getElementById('vehicle-status').className = 'vehicle-status idle';
+  document.getElementById('status-lamp').className    = 'status-lamp idle';
+  document.getElementById('vs-plate').textContent = 'في انتظار مسح QR...';
+  document.getElementById('vs-info').textContent  = 'وجّه الكاميرا نحو ملصق QR على المركبة';
+  document.getElementById('vs-time').textContent  = '';
+  document.getElementById('alerts-row').innerHTML = '';
+  document.getElementById('owner-ava').style.display = 'none';
+  document.getElementById('owner-img').style.display = 'none';
+  document.getElementById('idle-state').style.display = 'flex';
+  document.getElementById('vehicle-data').style.display = 'none';
+  document.getElementById('viol-btn').disabled = true;
+  document.getElementById('manual-input').value = '';
+  if (camInterval) document.getElementById('qr-status').textContent = 'جارٍ المسح...';
+}
+
+// ── Modal المخالفة ────────────────────────────────────────────────
+function openViolModal() {
+  if (!current) return;
+  document.getElementById('modal-veh-summary').innerHTML =
+    `<strong>${current.plate_number}</strong> — ${current.make||''} ${current.model||''} | ${current.owner_name||'—'}`;
+  document.getElementById('vt-select').value = '';
+  document.getElementById('fine-display').textContent = '—';
+  document.getElementById('viol-location').value = '';
+  document.getElementById('viol-desc').value = '';
+  document.getElementById('viol-modal').classList.add('open');
+}
+function closeViolModal() { document.getElementById('viol-modal').classList.remove('open'); }
+
+function updateFine() {
+  const sel = document.getElementById('vt-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('fine-display').textContent =
+    opt.value === 'exceptional' ? 'يحددها قسم المخالفات' :
+    opt.dataset.fine ? `${opt.dataset.fine} دينار ليبي` : '—';
+}
+
+async function submitViol() {
+  const vtId = document.getElementById('vt-select').value;
+  const desc = document.getElementById('viol-desc').value.trim();
+  const loc  = document.getElementById('viol-location').value.trim();
+  if (!vtId) { toast('اختر نوع المخالفة', 'red'); return; }
+  if (!current) return;
+
+  const isExc = vtId === 'exceptional';
+  const url   = isExc ? '/api/v1/violations/exceptional' : '/api/v1/violations';
+  const body  = isExc
+    ? { vehicle_id: current.id, description: desc||'مخالفة ميدانية', location_note: loc }
+    : { vehicle_id: current.id, violation_type_id: parseInt(vtId), location_note: loc, description: desc };
+
+  const res  = await fetch(url, {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.success) {
+    closeViolModal();
+    toast(isExc ? '✅ أُرسلت للمخالفات للمراجعة' : `✅ تم تسجيل المخالفة — ${data.data?.fine_amount||''} د.ل`);
+    // تحديث عرض المركبة
+    if (current.qr_token) fetchByQr(current.qr_token);
+  } else toast(data.message || 'خطأ', 'red');
+}
+
+function toast(msg, color='green') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  el.style.background = color==='red' ? '#dc2626' : '#065f46';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── تبديل الموبايل ────────────────────────────────────────────────
+function mobSwitch(tab) {
+  const isMob = window.innerWidth <= 768;
+  if (!isMob) return;
+  const camPanel    = document.getElementById('cam-panel');
+  const resultPanel = document.getElementById('result-panel');
+  const tabCam      = document.getElementById('mob-tab-cam');
+  const tabResult   = document.getElementById('mob-tab-result');
+  if (tab === 'cam') {
+    camPanel.classList.add('mob-active');
+    resultPanel.classList.remove('mob-active');
+    tabCam.classList.add('active');
+    tabResult.classList.remove('active');
+  } else {
+    resultPanel.classList.add('mob-active');
+    camPanel.classList.remove('mob-active');
+    tabResult.classList.add('active');
+    tabCam.classList.remove('active');
+  }
+}
+
+// تهيئة
+loadVtypes();
+</script>
+</body>
+</html>

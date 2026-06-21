@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>بوابة المواطن — مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:   #2563EB;
+      --primary-d: #1d4ed8;
+      --primary-l: #EFF6FF;
+      --accent:    #F59E0B;
+      --success:   #16A34A;
+      --danger:    #DC2626;
+      --bg:        #F1F5F9;
+      --surface:   #FFFFFF;
+      --border:    #E2E8F0;
+      --text:      #0F172A;
+      --text2:     #475569;
+      --text3:     #94A3B8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      direction: rtl;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ─── الصفحة ─── */
+    .page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    /* ─── الجانب الأيسر ─── */
+    .brand-side {
+      flex: 1;
+      max-width: 380px;
+      display: none;
+    }
+    @media(min-width: 860px) { .brand-side { display: block; } }
+
+    .brand-logo {
+      width: 80px; height: 80px;
+      border-radius: 20px;
+      object-fit: cover;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(37,99,235,0.2);
+      border: 3px solid var(--surface);
+    }
+
+    .brand-title {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.3;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .brand-title span { color: var(--primary); }
+
+    .brand-sub {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.9;
+      margin-bottom: 28px;
+    }
+
+    .feature-list { list-style: none; }
+    .feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 0;
+      color: var(--text2);
+      font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    .feature-list li:last-child { border: none; }
+
+    .feat-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--primary-l);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    /* ─── البطاقة ─── */
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border-radius: 24px;
+      box-shadow: 0 8px 40px rgba(15,23,42,0.10), 0 1px 3px rgba(15,23,42,0.06);
+      overflow: hidden;
+    }
+
+    .card-top {
+      padding: 28px 28px 0;
+      text-align: center;
+    }
+
+    .card-logo {
+      width: 58px; height: 58px;
+      border-radius: 14px;
+      object-fit: cover;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.18);
+    }
+
+    .card-ministry {
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: var(--primary);
+      margin-top: 3px;
+    }
+
+    /* التبويبات */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin: 20px 24px 0;
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 4px;
+    }
+
+    .tab {
+      padding: 10px;
+      text-align: center;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text3);
+      transition: all .2s;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+    }
+
+    /* النموذج */
+    .form-wrap { padding: 22px 24px 26px; }
+
+    .form-group { margin-bottom: 15px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text2);
+      margin-bottom: 7px;
+    }
+
+    .req { color: var(--primary); }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      transition: all .2s;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .form-input::placeholder { color: var(--text3); }
+
+    .form-hint {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 5px;
+    }
+
+    /* رفع الملفات */
+    .file-upload {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1.5px dashed var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .file-upload:hover { border-color: var(--primary); }
+    .file-upload.ok { border-color: var(--success); background: #F0FDF4; }
+    .file-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-icon { font-size: 20px; flex-shrink: 0; }
+    .file-text { font-size: 12px; color: var(--text3); }
+    .file-name { font-size: 11px; color: var(--success); }
+
+    /* فاصل */
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 14px 0 12px;
+    }
+    .div-line { flex: 1; height: 1px; background: var(--border); }
+    .div-text { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+    /* الزر الرئيسي */
+    .btn-main {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Cairo', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all .2s;
+    }
+    .btn-main:hover { background: var(--primary-d); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.35); }
+    .btn-main:active { transform: translateY(0); }
+    .btn-main:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* التنبيه */
+    .alert {
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .alert-error   { background: #FEF2F2; border: 1px solid #FECACA; color: var(--danger); }
+    .alert-success { background: #F0FDF4; border: 1px solid #BBF7D0; color: var(--success); }
+
+    /* رقم المراجعة */
+    .review-box {
+      display: none;
+      margin-top: 16px;
+      background: linear-gradient(135deg, #EFF6FF, #F0FDF4);
+      border: 1.5px solid #BFDBFE;
+      border-radius: 16px;
+      padding: 22px;
+      text-align: center;
+    }
+    .review-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; letter-spacing: 1px; }
+    .review-num {
+      font-size: 38px;
+      font-weight: 900;
+      font-family: monospace;
+      letter-spacing: 6px;
+      color: var(--primary);
+    }
+    .review-sub { font-size: 11px; color: var(--text2); margin-top: 10px; line-height: 1.8; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* حقل كلمة المرور مع زر الإظهار */
+    .pass-wrap { position:relative; }
+    .pass-wrap .form-input { padding-left: 44px; }
+    .pass-toggle {
+      position:absolute; left:12px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; color:var(--text3); padding:4px;
+      display:flex; align-items:center;
+    }
+    .pass-toggle:hover { color:var(--primary); }
+
+    /* رابط نسيان كلمة المرور */
+    .forgot-link { font-size:12px; color:var(--primary); cursor:pointer; text-align:left; display:block; margin-top:4px; }
+    .forgot-link:hover { text-decoration:underline; }
+
+    /* لوحة OTP */
+    .otp-input {
+      width:100%; padding:16px; text-align:center; font-size:28px; font-weight:900;
+      letter-spacing:12px; font-family:monospace; background:var(--bg);
+      border:2px solid var(--border); border-radius:12px; color:var(--text);
+      outline:none; direction:ltr;
+    }
+    .otp-input:focus { border-color:var(--primary); background:var(--surface); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+    .back-link { font-size:12px; color:var(--text3); cursor:pointer; text-align:center; display:block; margin-top:10px; }
+    .back-link:hover { color:var(--primary); }
+    .step-indicator { display:flex; gap:6px; justify-content:center; margin-bottom:18px; }
+    .step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); }
+    .step-dot.active { background:var(--primary); }
+    .step-dot.done { background:var(--success); }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-left: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    .card-footer {
+      padding: 14px 24px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 11px;
+      color: var(--text3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- الجانب الأيسر -->
+  <div class="brand-side">
+    <img src="/img/sabha-logo.jpg" class="brand-logo" alt="مرور سبها" onerror="this.style.display='none'">
+    <div class="brand-title">بوابة مرور<br><span>سبها الرقمية</span></div>
+    <div class="brand-sub">
+      منصة متكاملة لخدمات تسجيل المركبات<br>
+      ومتابعة الإجراءات إلكترونياً
+    </div>
+    <ul class="feature-list">
+      <li><div class="feat-icon">🚗</div><span>متابعة تسجيل مركبتك خطوة بخطوة</span></li>
+      <li><div class="feat-icon">📋</div><span>تقديم البلاغات وطلب تعليق المركبة</span></li>
+      <li><div class="feat-icon">🔔</div><span>إشعارات انتهاء التأمين والبل</span></li>
+      <li><div class="feat-icon">🔍</div><span>مسح QR لعرض بيانات مركبتك</span></li>
+    </ul>
+  </div>
+
+  <!-- البطاقة -->
+  <div class="card">
+
+    <div class="card-top">
+      <img src="/img/sabha-logo.jpg" class="card-logo" alt="مرور سبها" onerror="this.style.display='none'">
+      <div class="card-ministry">Libyan Ministry of Interior</div>
+      <div class="card-title">مديرية أمن سبها</div>
+      <div class="card-subtitle">إدارة مرور سبها · بوابة المواطن</div>
+    </div>
+
+    <div class="tabs" style="margin:20px 24px 0;">
+      <div class="tab active" onclick="switchTab('login')">تسجيل الدخول</div>
+      <div class="tab" onclick="switchTab('register')">حساب جديد</div>
+    </div>
+
+    <div class="form-wrap">
+
+      <div id="alert" class="alert"></div>
+
+      <!-- تسجيل الدخول -->
+      <div class="panel active" id="p-login">
+        <div class="form-group">
+          <label class="form-label">الرقم الوطني <span class="req">*</span></label>
+          <input class="form-input" id="l-user" placeholder="أدخل رقمك الوطني (12 رقم)" dir="ltr" inputmode="numeric" maxlength="12" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">كلمة المرور <span class="req">*</span></label>
+          <div class="pass-wrap">
+            <input class="form-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+            <button class="pass-toggle" type="button" onclick="togglePass('l-pass',this)" title="إظهار/إخفاء">
+              <svg id="eye-login" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="forgot-link" onclick="showForgot()">نسيت كلمة المرور؟</span>
+        </div>
+        <button class="btn-main" id="login-btn" onclick="doLogin()">دخول ←</button>
+      </div>
+
+      <!-- نسيان كلمة المرور -->
+      <div class="panel" id="p-forgot">
+
+        <!-- خطوة 1: رقم وطني -->
+        <div id="forgot-step1">
+          <div class="step-indicator">
+            <div class="step-dot active" id="sd1"></div>
+            <div class="step-dot" id="sd2"></div>
+            <div class="step-dot" id="sd3"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الرقم الوطني</label>
+            <input class="form-input" id="f-nid" placeholder="أدخل رقمك الوطني" dir="ltr" inputmode="numeric" maxlength="12">
+            <div class="form-hint">سيُرسَل رمز التحقق إلى بريدك المسجل في النظام</div>
+          </div>
+          <button class="btn-main" id="f-btn1" onclick="forgotStep1()">إرسال رمز التحقق ←</button>
+          <span class="back-link" onclick="showLogin()">← العودة لتسجيل الدخول</span>
+        </div>
+
+        <!-- خطوة 2: OTP -->
+        <div id="forgot-step2" style="display:none;">
+          <div class="step-indicator">
+            <div class="step-dot done"></div>
+            <div class="step-dot active" id="sd2b"></div>
+            <div class="step-dot" id="sd3b"></div>
+          </div>
+          <p style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:16px;" id="otp-hint">تم إرسال الرمز إلى بريدك الإلكتروني</p>
+          <div class="form-group">
+            <label class="form-label">رمز التحقق (6 أرقام)</label>
+            <input class="otp-input" id="f-otp" maxlength="6" inputmode="numeric" placeholder="000000"
+              oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
+          <button class="btn-main" id="f-btn2" onclick="forgotStep2()">تحقق ←</button>
+          <span class="back-link" onclick="document.getElementById('forgot-step1').style.display='';document.getElementById('forgot-step2').style.display='none';">← إعادة إرسال الرمز</span>
+        </div>
+
+        <!-- خطوة 3: كلمة مرور جديدة -->
+        <div id="forgot-step3" style="display:none;">
+          <div class="step-indicator">
+            <div class="step-dot done"></div>
+            <div class="step-dot done"></div>
+            <div class="step-dot active"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">كلمة المرور الجديدة</label>
+            <div class="pass-wrap">
+              <input class="form-input" id="f-pass1" type="password" placeholder="8 أحرف على الأقل">
+              <button class="pass-toggle" type="button" onclick="togglePass('f-pass1',this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">تأكيد كلمة المرور</label>
+            <div class="pass-wrap">
+              <input class="form-input" id="f-pass2" type="password" placeholder="أعد الكتابة">
+              <button class="pass-toggle" type="button" onclick="togglePass('f-pass2',this)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <button class="btn-main" id="f-btn3" onclick="forgotStep3()">حفظ كلمة المرور ←</button>
+        </div>
+      </div>
+
+      <!-- إنشاء حساب -->
+      <div class="panel" id="p-register">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label">الاسم الكامل <span class="req">*</span></label>
+            <input class="form-input" id="r-name" placeholder="كما في الوثائق الرسمية">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الرقم الوطني <span class="req">*</span></label>
+            <input class="form-input" id="r-nid" placeholder="12 رقم" maxlength="12" inputmode="numeric" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input class="form-input" id="r-phone" placeholder="09xxxxxxxx" dir="ltr">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label">البريد الإلكتروني <span class="req">*</span></label>
+            <input class="form-input" id="r-email" type="email" placeholder="example@email.com" dir="ltr">
+            <div class="form-hint">سيُرسَل رقم المراجعة على هذا البريد</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">المدينة <span class="req">*</span></label>
+            <select class="form-input" id="r-city" onchange="updateCitizenDistrict()">
+              <option value="">— اختر المدينة —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الحي <span class="req">*</span></label>
+            <select class="form-input" id="r-district" disabled>
+              <option value="">— اختر الحي —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider"><div class="div-line"></div><div class="div-text">كلمة المرور</div><div class="div-line"></div></div>
+
+        <div class="form-group">
+          <label class="form-label">كلمة المرور <span class="req">*</span></label>
+          <div class="pass-wrap">
+            <input class="form-input" id="r-pass" type="password" placeholder="8 أحرف على الأقل">
+            <button class="pass-toggle" type="button" onclick="togglePass('r-pass',this)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="form-hint">سيكون رقمك الوطني هو اسم مستخدمك للدخول</div>
+        </div>
+
+        <div class="divider"><div class="div-line"></div><div class="div-text">الوثائق المطلوبة</div><div class="div-line"></div></div>
+
+        <div class="form-group">
+          <label class="form-label">الصورة الشخصية <span class="req">*</span></label>
+          <div class="file-upload" id="photo-wrap">
+            <input type="file" id="r-photo" accept="image/*" onchange="onFile('r-photo','photo-wrap','photo-name')">
+            <div class="file-icon">📷</div>
+            <div><div class="file-text">اضغط لرفع الصورة</div><div class="file-name" id="photo-name"></div></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">شهادة الميلاد <span class="req">*</span></label>
+          <div class="file-upload" id="birth-wrap">
+            <input type="file" id="r-birth" accept=".pdf,image/*" onchange="onFile('r-birth','birth-wrap','birth-name')">
+            <div class="file-icon">📄</div>
+            <div><div class="file-text">PDF أو صورة</div><div class="file-name" id="birth-name"></div></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">البطاقة الشخصية أو الجواز <span class="req">*</span></label>
+          <div class="file-upload" id="id-wrap">
+            <input type="file" id="r-id" accept=".pdf,image/*" onchange="onFile('r-id','id-wrap','id-name')">
+            <div class="file-icon">🪪</div>
+            <div><div class="file-text">PDF أو صورة</div><div class="file-name" id="id-name"></div></div>
+          </div>
+        </div>
+
+        <button class="btn-main" id="reg-btn" onclick="doRegister()">إنشاء الحساب وإرسال الطلب ←</button>
+
+        <div class="review-box" id="review-box">
+          <div class="review-label">رقم المراجعة الخاص بك</div>
+          <div class="review-num" id="review-num"></div>
+          <div class="review-sub">📧 تم إرساله على بريدك الإلكتروني<br>احتفظ به للمتابعة في قسم التسجيل</div>
+          <button class="btn-main" style="margin-top:14px;" onclick="location.href='/citizen/home'">الدخول لحسابي ←</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-footer">
+      مديرية أمن سبها · وزارة الداخلية الليبية © 2026
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/libya-cities.js"></script>
+<script>
+function updateCitizenDistrict() {
+  const city = document.getElementById('r-city').value;
+  const dist = document.getElementById('r-district');
+  const districts = (typeof LIBYA_CITIES !== 'undefined' && LIBYA_CITIES[city]) || [];
+  dist.innerHTML = '<option value="">— اختر الحي —</option>' +
+    districts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  dist.disabled = !city;
+}
+
+// ── إظهار/إخفاء كلمة المرور ──────────────────────────────────
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  const isPass = inp.type === 'password';
+  inp.type = isPass ? 'text' : 'password';
+  btn.innerHTML = isPass
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+
+// ── التنقل بين اللوحات ────────────────────────────────────────
+function showPanel(id) {
+  ['p-login','p-register','p-forgot'].forEach(p => {
+    document.getElementById(p).classList.toggle('active', p === id);
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', (i===0&&id==='p-login')||(i===1&&id==='p-register'));
+  });
+  document.getElementById('alert').style.display = 'none';
+}
+function showLogin()  { showPanel('p-login'); }
+function showForgot() { showPanel('p-forgot'); document.getElementById('forgot-step1').style.display=''; document.getElementById('forgot-step2').style.display='none'; document.getElementById('forgot-step3').style.display='none'; }
+
+// ── نسيان كلمة المرور ─────────────────────────────────────────
+let _forgotNid = '', _resetToken = '';
+
+async function forgotStep1() {
+  const nid = document.getElementById('f-nid').value.trim();
+  if (!nid) return showAlert('أدخل رقمك الوطني','error');
+  const btn = document.getElementById('f-btn1');
+  btn.innerHTML='<span class="spinner"></span> جارٍ الإرسال...'; btn.disabled=true;
+  try {
+    const res = await fetch('/api/v1/citizen/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({national_id:nid})});
+    const d = await res.json();
+    if (d.success) {
+      _forgotNid = nid;
+      document.getElementById('otp-hint').textContent = d.message;
+      document.getElementById('forgot-step1').style.display='none';
+      document.getElementById('forgot-step2').style.display='';
+    } else { showAlert(d.message||'خطأ','error'); }
+  } catch(e) { showAlert('خطأ في الاتصال','error'); }
+  btn.innerHTML='إرسال رمز التحقق ←'; btn.disabled=false;
+}
+
+async function forgotStep2() {
+  const otp = document.getElementById('f-otp').value.trim();
+  if (otp.length !== 6) return showAlert('الرمز 6 أرقام','error');
+  const btn = document.getElementById('f-btn2');
+  btn.innerHTML='<span class="spinner"></span> جارٍ التحقق...'; btn.disabled=true;
+  try {
+    const res = await fetch('/api/v1/citizen/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({national_id:_forgotNid,otp})});
+    const d = await res.json();
+    if (d.success) {
+      _resetToken = d.reset_token;
+      document.getElementById('forgot-step2').style.display='none';
+      document.getElementById('forgot-step3').style.display='';
+    } else { showAlert(d.message||'الرمز غير صحيح','error'); }
+  } catch(e) { showAlert('خطأ في الاتصال','error'); }
+  btn.innerHTML='تحقق ←'; btn.disabled=false;
+}
+
+async function forgotStep3() {
+  const p1 = document.getElementById('f-pass1').value;
+  const p2 = document.getElementById('f-pass2').value;
+  if (p1.length < 8) return showAlert('كلمة المرور 8 أحرف على الأقل','error');
+  if (p1 !== p2) return showAlert('كلمتا المرور غير متطابقتين','error');
+  const btn = document.getElementById('f-btn3');
+  btn.innerHTML='<span class="spinner"></span> جارٍ الحفظ...'; btn.disabled=true;
+  try {
+    const res = await fetch('/api/v1/citizen/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({national_id:_forgotNid,reset_token:_resetToken,new_password:p1})});
+    const d = await res.json();
+    if (d.success) {
+      showAlert('✓ تم تغيير كلمة المرور — يمكنك الدخول الآن','success');
+      setTimeout(showLogin, 2000);
+    } else { showAlert(d.message||'خطأ','error'); }
+  } catch(e) { showAlert('خطأ في الاتصال','error'); }
+  btn.innerHTML='حفظ كلمة المرور ←'; btn.disabled=false;
+}
+
+// تهيئة قوائم المدن عند فتح تبويب التسجيل
+function switchTab(t) {
+  showPanel(t==='login'?'p-login':'p-register');
+  if (t==='register' && typeof LIBYA_CITIES!=='undefined') {
+    const cityEl = document.getElementById('r-city');
+    if (cityEl && cityEl.options.length<=1) {
+      Object.keys(LIBYA_CITIES).forEach(c=>{
+        const o=document.createElement('option'); o.value=c; o.textContent=c;
+        if (c==='سبها') o.selected=true;
+        cityEl.appendChild(o);
+      });
+      updateCitizenDistrict.call({value:'سبها'});
+      document.getElementById('r-city').value='سبها';
+      updateCitizenDistrict();
+    }
+  }
+  document.getElementById('p-login').classList.toggle('active',t==='login');
+  document.getElementById('p-register').classList.toggle('active',t==='register');
+  document.getElementById('alert').style.display='none';
+}
+function onFile(inputId,wrapId,nameId) {
+  const f=document.getElementById(inputId).files[0];
+  if(f){document.getElementById(wrapId).classList.add('ok');document.getElementById(nameId).textContent='✓ '+f.name;}
+}
+
+function showAlert(msg,type){
+  const el=document.getElementById('alert');
+  el.className=`alert alert-${type}`;
+  el.innerHTML=`<span>${type==='error'?'⚠':'✓'}</span> ${msg}`;
+  el.style.display='flex';
+  if(type!=='success')setTimeout(()=>el.style.display='none',5000);
+}
+
+async function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value;
+  if(!u||!p){showAlert('أدخل اسم المستخدم وكلمة المرور','error');return;}
+  const btn=document.getElementById('login-btn');
+  btn.innerHTML='<span class="spinner"></span> جارٍ الدخول...';
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await res.json();
+    if(d.success&&d.data.role==='CITIZEN'){
+      localStorage.setItem('auth_token',d.data.token);
+      localStorage.setItem('user_role',d.data.role);
+      localStorage.setItem('user_name',d.data.full_name||u);
+      location.href='/citizen/home';
+    }else if(d.success){showAlert('هذه البوابة للمواطنين فقط','error');}
+    else{showAlert(d.message||'بيانات الدخول غير صحيحة','error');}
+  }catch(e){showAlert('خطأ في الاتصال','error');}
+  btn.innerHTML='دخول ←';btn.disabled=false;
+}
+
+async function doRegister(){
+  const name=document.getElementById('r-name').value.trim();
+  const nid=document.getElementById('r-nid').value.trim();
+  const email=document.getElementById('r-email').value.trim();
+  const phone=document.getElementById('r-phone').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const photo=document.getElementById('r-photo').files[0];
+  const birth=document.getElementById('r-birth').files[0];
+  const idDoc=document.getElementById('r-id').files[0];
+
+  const city=document.getElementById('r-city').value;
+  const district=document.getElementById('r-district').value;
+
+  if(!name||!nid||!email||!pass)return showAlert('أكمل الحقول الإلزامية','error');
+  if(!city)return showAlert('يرجى اختيار المدينة','error');
+  if(!district)return showAlert('يرجى اختيار الحي','error');
+  if(nid.length!==12||!/^\d+$/.test(nid))return showAlert('الرقم الوطني 12 رقم','error');
+  if(pass.length<8)return showAlert('كلمة المرور 8 أحرف على الأقل','error');
+  if(!photo||!birth||!idDoc)return showAlert('يرجى رفع الوثائق الثلاثة','error');
+
+  const btn=document.getElementById('reg-btn');
+  btn.innerHTML='<span class="spinner"></span> جارٍ الإرسال...';
+  btn.disabled=true;
+
+  const fd=new FormData();
+  fd.append('full_name',name);fd.append('national_id',nid);
+  fd.append('email',email);fd.append('phone',phone);
+  fd.append('password',pass);
+  fd.append('photo',photo);fd.append('birth_cert',birth);fd.append('id_doc',idDoc);
+  fd.append('address', [city,district].filter(Boolean).join(' — '));
+
+  try{
+    const res=await fetch('/api/v1/citizen/register',{method:'POST',body:fd});
+    const d=await res.json();
+    if(d.success){
+      btn.style.display='none';
+      document.getElementById('review-box').style.display='block';
+      document.getElementById('review-num').textContent=d.data.review_number;
+      if(d.data.token){localStorage.setItem('auth_token',d.data.token);localStorage.setItem('user_role','CITIZEN');localStorage.setItem('user_name',name);}
+    }else{showAlert(d.message||'حدث خطأ','error');btn.innerHTML='إنشاء الحساب وإرسال الطلب ←';btn.disabled=false;}
+  }catch(e){showAlert('خطأ في الاتصال: '+e.message,'error');btn.innerHTML='إنشاء الحساب وإرسال الطلب ←';btn.disabled=false;}
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('p-login').classList.contains('active'))doLogin();});
+
+// تهيئة أولية للقوائم
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof LIBYA_CITIES !== 'undefined') {
+    const cityEl = document.getElementById('r-city');
+    Object.keys(LIBYA_CITIES).forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      if (c === 'سبها') o.selected = true;
+      cityEl.appendChild(o);
+    });
+    document.getElementById('r-city').value = 'سبها';
+    updateCitizenDistrict();
+  }
+});
+</script>
+</body>
+</html>

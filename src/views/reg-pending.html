@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الطلبات المعلّقة</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div><script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">الطلبات المعلّقة</h1>
+      <p class="page-subtitle" id="sub">طلبات التسجيل التي تنتظر إجراءك</p>
+    </div>
+    <a href="/vehicles/new" class="btn btn-primary" id="new-btn" style="display:none;">+ طلب جديد</a>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:16px;"></div>
+  <div id="list"><div class="card"><div class="card-body"><p class="text-muted text-center">جارٍ التحميل...</p></div></div></div>
+
+</div></div>
+
+<!-- نافذة إرسال للفحص -->
+<div id="send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:420px;border:1px solid var(--border);">
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">إرسال بيانات المالك لقسم الفحص</h3>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:16px;">سيتلقى قسم الفحص الفني إشعاراً ببيانات المالك ويبدأ إجراءات الفحص.</p>
+    <input type="hidden" id="modal-pending-id">
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="sendToInsp()">إرسال لقسم الفحص</button>
+      <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+
+const STEP_LABELS = {
+  'step1_pending_admin':        { label:'⏳ ينتظر موافقة المدير', cls:'badge-warning' },
+  'step2_approved':             { label:'✅ موافقة المدير — أرسل للفحص', cls:'badge-success' },
+  'step3_at_inspection':        { label:'🔧 عند قسم الفحص', cls:'badge-info' },
+  'step4_back_to_reg':          { label:'📬 عاد من الفحص — أدخل البل وأصدر لوحة', cls:'badge-primary' },
+  'step5_pending_final_approval':{ label:'⏳ ينتظر الاعتماد النهائي', cls:'badge-warning' },
+  'step6_approved_for_plate':   { label:'✅ جاهز للطباعة', cls:'badge-success' },
+};
+
+async function load() {
+  if (role==='REG_CHIEF') document.getElementById('new-btn').style.display='flex';
+  const res  = await fetch('/api/v1/vehicles/pending',{headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) return;
+  const items = data.data;
+  if (!items.length) {
+    document.getElementById('list').innerHTML=`<div class="card"><div class="card-body"><p class="text-muted text-center">لا توجد طلبات معلّقة</p></div></div>`;
+    return;
+  }
+  document.getElementById('list').innerHTML = items.map(item => {
+    const st = STEP_LABELS[item.status] || {label:item.status, cls:'badge-secondary'};
+    const vData = item.vehicle_data ? JSON.parse(item.vehicle_data) : null;
+    const actions = getActions(item, role);
+    return `
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;">${item.owner_name}</div>
+            <div style="font-size:12px;color:var(--text-3);">الرقم الوطني: ${item.owner_national_id} · طلب #${item.id} · ${item.created_at?.split('T')[0]||''}</div>
+          </div>
+          <span class="badge ${st.cls}">${st.label}</span>
+        </div>
+        ${vData ? `<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">🚗 ${vData.make} ${vData.model} ${vData.year} · ${vData.chassis_number||''}</div>` : ''}
+        ${item.plate_number ? `<div style="font-size:14px;font-weight:900;font-family:monospace;color:var(--blue);margin-bottom:10px;">🏁 ${item.plate_number}</div>` : ''}
+        <div style="display:flex;gap:8px;">${actions}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getActions(item, role) {
+  const id = item.id;
+  if (role==='ADMIN') {
+    if (item.status==='step1_pending_admin')
+      return `<button class="btn btn-success btn-sm" onclick="adminDecide(${id},'approved')">✅ موافقة</button><button class="btn btn-danger btn-sm" onclick="adminDecide(${id},'rejected')">❌ رفض</button>`;
+    if (item.status==='step5_pending_final_approval')
+      return `<a href="/vehicles/approve/${id}" class="btn btn-primary btn-sm">مراجعة كاملة واعتماد</a>`;
+  }
+  if (role==='REG_CHIEF') {
+    if (item.status==='step2_approved')
+      return `<button class="btn btn-primary btn-sm" onclick="openModal(${id})">إرسال لقسم الفحص ←</button>`;
+    if (item.status==='step4_back_to_reg')
+      return `<a href="/vehicles/step5/${id}" class="btn btn-success btn-sm">أدخل البل وأصدر اللوحة ←</a>`;
+  }
+  if (role==='INSP_CHIEF' && item.status==='step3_at_inspection')
+    return `<a href="/vehicles/inspect/${id}" class="btn btn-primary btn-sm">إدخال بيانات الفحص ←</a>`;
+  if (role==='PLATE_DEPT' && item.status==='step6_approved_for_plate')
+    return `<button class="btn btn-success btn-sm" onclick="issuePlate(${id})">🖨️ إصدار اللوحة (30 د.ل)</button>`;
+  return '';
+}
+
+async function adminDecide(id, decision) {
+  const reason = decision==='rejected' ? prompt('سبب الرفض:') : '';
+  if (decision==='rejected' && !reason) return;
+  const res  = await fetch('/api/v1/vehicles/step2/decision',{method:'POST',headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},body:JSON.stringify({pending_id:id,decision,reason})});
+  const data = await res.json();
+  if (data.success) load(); else showAlert(data.message,'error');
+}
+
+function openModal(id) { document.getElementById('modal-pending-id').value=id; document.getElementById('send-modal').style.display='flex'; }
+function closeModal()  { document.getElementById('send-modal').style.display='none'; }
+
+async function sendToInsp() {
+  const id = document.getElementById('modal-pending-id').value;
+  const res  = await fetch('/api/v1/vehicles/step3/send-to-inspection',{method:'POST',headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},body:JSON.stringify({pending_id:parseInt(id)})});
+  const data = await res.json();
+  closeModal();
+  if (data.success) { showAlert('✅ تم إرسال بيانات المالك لقسم الفحص الفني','success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+async function issuePlate(id) {
+  if (!confirm('تأكيد استلام 30 دينار وإصدار اللوحة؟')) return;
+  const res  = await fetch('/api/v1/vehicles/step7/issue-plate',{method:'POST',headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},body:JSON.stringify({pending_id:id,fee_paid:30})});
+  const data = await res.json();
+  if (data.success) { showAlert(`✅ تم إصدار اللوحة ${data.data.plate_number}`,'success'); setTimeout(load,1500); }
+  else showAlert(data.message,'error');
+}
+
+function showAlert(msg,type){const el=document.getElementById('alert');el.className=`alert alert-${type==='error'?'error':'success'}`;el.textContent=msg;el.style.display='flex';setTimeout(()=>el.style.display='none',5000);}
+load(); setInterval(load,30000);
+</script>
+</body>
+</html>

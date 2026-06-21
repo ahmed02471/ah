@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محررو العقود — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>محررو العقود</span></div>
+          <h1 class="page-title">محررو العقود</h1>
+          <p class="page-subtitle">المحررون المعتمدون من المحكمة لتوثيق عقود البيع والشراء</p>
+        </div>
+        <div class="page-actions" id="add-btn-area">
+          <button class="btn btn-primary" onclick="openAdd()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            إضافة محرر
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          قائمة المحررين المعتمدين
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم المحرر</th>
+                <th>رقم القيد (المحكمة)</th>
+                <th>رقم الهاتف</th>
+                <th>الحالة</th>
+                <th id="actions-col"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr><td colspan="6"><div class="empty"><p>جارٍ التحميل...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">إضافة محرر عقود</span>
+        <button class="modal-close" onclick="closeModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-err" class="alert alert-error" style="display:none;"></div>
+        <div class="form-group">
+          <label class="form-label">اسم المحرر <span class="req">*</span></label>
+          <input class="form-input" id="f-name" placeholder="الاسم الكامل للمحرر">
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">رقم القيد بالمحكمة</label>
+            <input class="form-input" id="f-court" placeholder="مثال: SBH-001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input class="form-input" id="f-phone" placeholder="09XXXXXXXX" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="save()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+
+// REG_CHIEF يرى فقط — لا يضيف
+if (role === 'REG_CHIEF') {
+  document.getElementById('add-btn-area').style.display = 'none';
+  document.getElementById('actions-col').style.display = 'none';
+}
+
+async function load() {
+  const res  = await fetch('/api/v1/contract-writers', { headers: { Authorization: 'Bearer ' + T } });
+  const data = await res.json();
+  if (!data.success) { document.getElementById('tbody').innerHTML = `<tr><td colspan="6"><div class="empty"><p style="color:var(--danger)">${data.message}</p></div></td></tr>`; return; }
+  const writers = data.data || [];
+  if (!writers.length) {
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="6"><div class="empty"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><p>لا يوجد محررون مضافون</p></div></td></tr>`;
+    return;
+  }
+  document.getElementById('tbody').innerHTML = writers.map((w, i) => `
+    <tr>
+      <td class="text-muted">${i+1}</td>
+      <td class="fw-7">${w.name}</td>
+      <td class="font-mono">${w.court_number||'—'}</td>
+      <td>${w.phone||'—'}</td>
+      <td><span class="badge ${w.is_active?'badge-success':'badge-gray'}">${w.is_active?'نشط':'معطّل'}</span></td>
+      <td>${role==='ADMIN'?`<button class="btn btn-ghost btn-sm" onclick="remove(${w.id})">حذف</button>`:''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function remove(id) {
+  if (!confirm('هل تريد حذف هذا المحرر؟')) return;
+  await fetch(`/api/v1/contract-writers/${id}`, { method:'DELETE', headers:{Authorization:'Bearer '+T} });
+  load();
+}
+
+function openModal()  { document.getElementById('modal').style.display='flex'; }
+function closeModal() { document.getElementById('modal').style.display='none'; }
+const openAdd = openModal;
+
+async function save() {
+  const body = { name: document.getElementById('f-name').value.trim(), court_number: document.getElementById('f-court').value.trim(), phone: document.getElementById('f-phone').value.trim() };
+  if (!body.name) { document.getElementById('modal-err').textContent='الاسم مطلوب'; document.getElementById('modal-err').style.display='flex'; return; }
+  const res = await fetch('/api/v1/contract-writers', { method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.success) { closeModal(); load(); }
+  else { document.getElementById('modal-err').textContent=data.message; document.getElementById('modal-err').style.display='flex'; }
+}
+
+load();
+</script>
+</body>
+</html>

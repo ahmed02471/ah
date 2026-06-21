@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل التدقيق — نظام مرور سبها</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="with-sidebar">
+    
+    
+    
+    
+
+    <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+        <div class="page-wrapper">
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">سجل التدقيق</h1>
+                    <p class="page-subtitle">تتبع جميع الإجراءات والعمليات المنفذة في النظام</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                    سجلات التدقيق
+                </div>
+                <div class="card-body" style="padding-bottom:0;">
+                    <div class="search-bar">
+                        <select class="form-select" id="filter-action" style="max-width:200px;">
+                            <option value="">كل الإجراءات</option>
+                            <option value="CREATE">إنشاء</option>
+                            <option value="UPDATE">تعديل</option>
+                            <option value="DELETE">حذف</option>
+                            <option value="ACTIVATE">تفعيل</option>
+                            <option value="DEACTIVATE">إيقاف</option>
+                            <option value="RESET">إعادة تعيين كلمة مرور</option>
+                            <option value="LOGIN">تسجيل دخول</option>
+                            <option value="APPROVE">اعتماد</option>
+                            <option value="REJECT">رفض</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr>
+                            <th>المستخدم</th>
+                            <th>الإجراء</th>
+                            <th>الجدول</th>
+                            <th>رقم السجل</th>
+                            <th>عنوان IP</th>
+                            <th>الوقت</th>
+                        </tr></thead>
+                        <tbody id="audit-tbody">
+                            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">جارٍ التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <button class="btn btn-secondary btn-sm" id="prev-page" onclick="changePage(-1)" disabled>السابق</button>
+                    <span id="page-info" style="font-size:.875rem;color:var(--text-2);">صفحة 1</span>
+                    <button class="btn btn-secondary btn-sm" id="next-page" onclick="changePage(1)">التالي</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1; const pageSize = 30;
+        const actionColors = { CREATE:'badge-green', UPDATE:'badge-blue', DELETE:'badge-red', LOGIN:'badge-gray' };
+
+        async function loadAudit() {
+            const action = document.getElementById('filter-action').value;
+            const params = new URLSearchParams({ limit: pageSize, page: currentPage, ...(action && { action }) });
+            const tbody = document.getElementById('audit-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">جارٍ التحميل...</td></tr>`;
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/v1/admin/audit?' + params, { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) throw new Error();
+                const logs  = data.data.logs  || [];
+                const total = data.data.total || 0;
+                document.getElementById('prev-page').disabled = currentPage === 1;
+                document.getElementById('next-page').disabled = logs.length < pageSize;
+                document.getElementById('page-info').textContent = `صفحة ${currentPage}`;
+                if (!logs.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-state-title">لا توجد سجلات</span></div></td></tr>`; return; }
+                tbody.innerHTML = logs.map(l => `<tr>
+                    <td style="font-weight:600;">${l.user_name || '—'}</td>
+                    <td><span class="badge ${actionColors[l.action] || 'badge-gray'}">${l.action}</span></td>
+                    <td style="color:var(--text-2);">${l.table_name || '—'}</td>
+                    <td class="font-mono">${l.record_id || '—'}</td>
+                    <td style="color:var(--text-3);font-size:.8rem;">${l.ip_address || '—'}</td>
+                    <td style="color:var(--text-2);font-size:.8rem;">${l.created_at ? new Date(l.created_at).toLocaleString('ar-LY') : '—'}</td>
+                </tr>`).join('');
+            } catch { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:32px;">خطأ في تحميل البيانات</td></tr>`; }
+        }
+
+        function changePage(dir) { currentPage = Math.max(1, currentPage + dir); loadAudit(); }
+        document.getElementById('filter-action').addEventListener('change', () => { currentPage=1; loadAudit(); });
+        loadAudit();
+    </script>
+</body>
+</html>

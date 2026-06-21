@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إضافة مخالفة — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/violations">المخالفات</a><span class="breadcrumb-sep">›</span><span>إضافة مخالفة</span></div>
+      <h1 class="page-title">إضافة مخالفة مرورية</h1>
+    </div>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;">
+
+    <!-- البحث عن المركبة -->
+    <div class="card">
+      <div class="card-header">🔍 البحث عن المركبة</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">رقم اللوحة أو الهيكل</label>
+          <div style="display:flex;gap:8px;">
+            <input class="form-input" id="search-plate" placeholder="أدخل رقم اللوحة..." dir="ltr" style="flex:1;">
+            <button class="btn btn-primary" onclick="searchVehicle()">بحث</button>
+          </div>
+        </div>
+
+        <div id="vehicle-result" style="display:none;background:var(--surface-3);border-radius:10px;padding:14px;margin-top:12px;">
+          <table style="width:100%;font-size:13px;border-collapse:collapse;" id="vehicle-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- بيانات المخالفة -->
+    <div class="card">
+      <div class="card-header">⚠️ بيانات المخالفة</div>
+      <div class="card-body">
+
+        <!-- نوع المخالفة -->
+        <div class="form-group">
+          <label class="form-label">نوع المخالفة <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="viol-type" onchange="onTypeChange()">
+            <option value="">— اختر نوع المخالفة —</option>
+          </select>
+        </div>
+
+        <!-- المبلغ -->
+        <div class="form-group">
+          <label class="form-label">مبلغ الغرامة (د.ل) <span style="color:var(--danger)">*</span></label>
+          <input class="form-input" id="viol-amount" type="number" step="0.5" placeholder="يُملأ تلقائياً">
+        </div>
+
+        <!-- الوصف النصي -->
+        <div class="form-group">
+          <label class="form-label">وصف المخالفة <span style="color:var(--danger)">*</span></label>
+          <textarea class="form-input" id="viol-desc" rows="3" placeholder="اشرح تفاصيل المخالفة بدقة..."></textarea>
+        </div>
+
+        <!-- الموقع -->
+        <div class="form-group">
+          <label class="form-label">موقع المخالفة</label>
+          <input class="form-input" id="viol-location" placeholder="مثال: شارع جمال عبدالناصر، قرب دوار الساعة">
+        </div>
+
+        <!-- المرجع القانوني -->
+        <div id="legal-ref-wrap" style="display:none;" class="form-group">
+          <label class="form-label">المرجع القانوني</label>
+          <input class="form-input" id="viol-legal" readonly style="background:var(--surface-3);color:var(--text-3);">
+        </div>
+
+        <!-- تحويل للنيابة -->
+        <div id="prosecutor-wrap" style="display:none;" class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">
+          ⚖️ هذا النوع من المخالفات يستوجب الإحالة للنيابة العامة
+        </div>
+
+        <!-- صورة الدليل -->
+        <div class="form-group">
+          <label class="form-label">صورة الدليل (اختياري)</label>
+          <input type="file" id="viol-evidence" accept="image/*" class="form-input" style="padding:8px;">
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <button class="btn btn-danger" style="flex:1;padding:13px;" onclick="saveViolation()">
+            ⚠️ إصدار المخالفة
+          </button>
+          <a href="/violations" class="btn btn-secondary" style="padding:13px;">إلغاء</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+let selectedVehicleId = null;
+let violationTypes = [];
+
+// تحميل أنواع المخالفات
+async function loadTypes() {
+  const res  = await fetch('/api/v1/admin/violation-types', {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  violationTypes = data.data || [];
+
+  const sel = document.getElementById('viol-type');
+  sel.innerHTML = '<option value="">— اختر نوع المخالفة —</option>';
+  violationTypes.forEach(t => {
+    sel.innerHTML += `<option value="${t.id}" data-fine="${t.fine_amount}" data-legal="${t.legal_reference||''}" data-pros="${t.requires_prosecutor||0}">${t.name_ar} — ${t.fine_amount} د.ل</option>`;
+  });
+}
+
+function onTypeChange() {
+  const sel = document.getElementById('viol-type');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+
+  document.getElementById('viol-amount').value = opt.dataset.fine || '';
+  document.getElementById('viol-desc').value = opt.text.split(' — ')[0] || '';
+
+  const legal = opt.dataset.legal;
+  if (legal && legal !== '—') {
+    document.getElementById('legal-ref-wrap').style.display = 'block';
+    document.getElementById('viol-legal').value = legal;
+  } else {
+    document.getElementById('legal-ref-wrap').style.display = 'none';
+  }
+
+  document.getElementById('prosecutor-wrap').style.display =
+    opt.dataset.pros === '1' ? 'flex' : 'none';
+}
+
+// البحث عن مركبة
+async function searchVehicle() {
+  const q = document.getElementById('search-plate').value.trim();
+  if (!q) return;
+
+  const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(q)}&limit=1`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  const vehicles = data.data?.vehicles || data.data || [];
+
+  if (!vehicles.length) {
+    showAlert('لم يتم العثور على مركبة بهذه البيانات', 'error');
+    return;
+  }
+
+  const v = vehicles[0];
+  selectedVehicleId = v.id;
+
+  document.getElementById('vehicle-result').style.display = 'block';
+  document.getElementById('vehicle-table').innerHTML = `
+    <tr><td style="color:var(--text-3);padding:5px 0;font-size:12px;width:40%">اللوحة</td><td style="font-weight:700;font-family:monospace;">${v.plate_number||'—'}</td></tr>
+    <tr><td style="color:var(--text-3);padding:5px 0;font-size:12px;">المالك</td><td style="font-weight:700;">${v.owner_name||'—'}</td></tr>
+    <tr><td style="color:var(--text-3);padding:5px 0;font-size:12px;">المركبة</td><td>${v.make||''} ${v.model||''} ${v.year||''}</td></tr>
+    <tr><td style="color:var(--text-3);padding:5px 0;font-size:12px;">الهيكل</td><td style="font-family:monospace;font-size:11px;">${v.chassis_number||'—'}</td></tr>
+    <tr><td colspan="2"><span class="badge badge-success" style="margin-top:6px;display:inline-block;">✅ مركبة محددة</span></td></tr>`;
+}
+
+// إصدار المخالفة
+let isSubmitting = false;
+async function saveViolation() {
+  if (isSubmitting) return;
+  isSubmitting = true;
+  const btn = document.querySelector('[onclick="saveViolation()"]');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ جارٍ الإصدار...'; }
+  if (!selectedVehicleId) { showAlert('حدد المركبة أولاً', 'error'); return; }
+  const typeId = document.getElementById('viol-type').value;
+  const amount = document.getElementById('viol-amount').value;
+  const desc   = document.getElementById('viol-desc').value.trim();
+  const loc    = document.getElementById('viol-location').value.trim();
+
+  if (!typeId)  { showAlert('اختر نوع المخالفة', 'error'); return; }
+  if (!amount)  { showAlert('أدخل مبلغ الغرامة', 'error'); return; }
+  if (!desc)    { showAlert('أدخل وصف المخالفة', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('vehicle_id',        selectedVehicleId);
+  fd.append('violation_type_id', typeId);
+  fd.append('fine_amount',       amount);
+  fd.append('description',       desc);
+  fd.append('location_note',     loc);
+  const ev = document.getElementById('viol-evidence').files[0];
+  if (ev) fd.append('evidence', ev);
+
+  try {
+    const res  = await fetch('/api/v1/violations', {
+      method:'POST', headers:{Authorization:'Bearer '+T}, body:fd
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAlert('✅ تم إصدار المخالفة بنجاح', 'success');
+      setTimeout(() => location.href = '/violations', 1500);
+    } else {
+      showAlert(data.message || 'خطأ في إصدار المخالفة', 'error');
+      isSubmitting=false; if(btn){btn.disabled=false;btn.textContent='⚠️ إصدار المخالفة';}
+    }
+  } catch(e) {
+    showAlert('❌ خطأ في الاتصال: ' + e.message, 'error');
+    isSubmitting=false; const b=document.querySelector('[onclick="saveViolation()"]'); if(b){b.disabled=false;b.textContent='⚠️ إصدار المخالفة';}
+  }
+}
+
+// Enter للبحث
+document.getElementById('search-plate').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchVehicle();
+});
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alert');
+  el.className = `alert alert-${type === 'error' ? 'error' : 'success'}`;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  if (type !== 'success') setTimeout(() => el.style.display = 'none', 5000);
+}
+
+loadTypes();
+</script>
+</body>
+</html>

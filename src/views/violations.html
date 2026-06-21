@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المخالفات — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+
+  <div class="main-content">
+    <div class="page-wrapper">
+
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>المخالفات</span></div>
+          <h1 class="page-title">المخالفات المرورية</h1>
+          <p class="page-subtitle" id="page-sub">إدارة المخالفات وتسديدها</p>
+        </div>
+        <div class="page-actions" id="actions-area"></div>
+      </div>
+
+      <!-- بطاقات إحصاء -->
+      <div class="stats-grid" id="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card red">
+          <div class="stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+          <div><div class="stat-num" id="s-total">—</div><div class="stat-label">إجمالي المخالفات</div></div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div><div class="stat-num" id="s-unpaid">—</div><div class="stat-label">غير مدفوعة</div></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div><div class="stat-num" id="s-paid">—</div><div class="stat-label">مدفوعة</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="search-bar">
+          <div class="input-wrap search-input">
+            <span class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input class="form-input" id="q" placeholder="بحث برقم اللوحة أو اسم المالك أو رقم المخالفة...">
+          </div>
+          <select class="form-select" id="status-filter" style="width:155px;">
+            <option value="">كل الحالات</option>
+            <option value="unpaid">غير مدفوعة</option>
+            <option value="paid">مدفوعة</option>
+            <option value="referred_to_prosecutor">للنيابة</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>المركبة</th>
+                <th>المالك</th>
+                <th>نوع المخالفة</th>
+                <th>الغرامة</th>
+                <th>تاريخ التحرير</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr><td colspan="8"><div class="empty"><p>جارٍ التحميل...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span class="pg-info" id="pg-info">—</span>
+          <div class="pg-btns">
+            <button class="btn btn-secondary btn-sm" id="pg-prev" onclick="pg(-1)" disabled>السابق</button>
+            <button class="btn btn-secondary btn-sm" id="pg-next" onclick="pg(1)">التالي</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+let page   = 1, timer;
+const LIM  = 15;
+
+// إضافة زر تحرير مخالفة للضابط
+if (role === 'OFFICER' || role === 'ADMIN') {
+  document.getElementById('actions-area').innerHTML = `
+    <a href="/violations/new" class="btn btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      تحرير مخالفة
+    </a>`;
+}
+if (role === 'OFFICER') document.getElementById('page-sub').textContent = 'المخالفات التي حررتها';
+
+const STATUS = {
+  unpaid:  { t:'غير مدفوعة', c:'badge-danger' },
+  paid:    { t:'مدفوعة',    c:'badge-success' },
+  referred_to_prosecutor: { t:'للنيابة', c:'badge-warning' }
+};
+
+async function load() {
+  const q      = document.getElementById('q').value;
+  const status = document.getElementById('status-filter').value;
+  try {
+    const res  = await fetch(
+      `/api/v1/violations?page=${page}&limit=${LIM}&q=${encodeURIComponent(q)}&status=${status}`,
+      { headers: { Authorization: 'Bearer ' + T } }
+    );
+    const data = await res.json();
+    if (!data.success) return;
+    const { violations, total } = data.data;
+
+    // إحصاء
+    document.getElementById('s-total').textContent  = total;
+
+    document.getElementById('pg-info').textContent = `إجمالي: ${total} مخالفة`;
+    document.getElementById('pg-prev').disabled    = page === 1;
+    document.getElementById('pg-next').disabled    = page * LIM >= total;
+
+    if (!violations.length) {
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="8"><div class="empty"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg><p>لا توجد مخالفات</p></div></td></tr>`;
+      return;
+    }
+
+    // إحصاء محلي
+    const unpaid = violations.filter(v => v.status === 'unpaid').length;
+    const paid   = violations.filter(v => v.status === 'paid').length;
+    document.getElementById('s-unpaid').textContent = unpaid;
+    document.getElementById('s-paid').textContent   = paid;
+
+    document.getElementById('tbody').innerHTML = violations.map((v, i) => {
+      const st = STATUS[v.status] || { t: v.status, c: 'badge-gray' };
+      return `
+        <tr class="table-link" onclick="location.href='/violations/${v.id}'">
+          <td class="text-muted" style="font-size:12px;">${v.id}</td>
+          <td>
+            <div class="font-mono fw-7" style="font-size:13px;">${v.plate_number||'—'}</div>
+            <div class="text-muted" style="font-size:11px;">${v.make||''} ${v.model||''}</div>
+          </td>
+          <td style="font-size:13px;">${v.owner_name||'—'}</td>
+          <td style="font-size:13px;">${v.type_name||'—'}</td>
+          <td style="font-size:14px;font-weight:700;color:var(--danger);">${v.fine_amount} <span style="font-size:11px;font-weight:400;">د.ل</span></td>
+          <td class="text-muted" style="font-size:12px;">${v.issued_at?v.issued_at.split('T')[0]:'—'}</td>
+          <td><span class="badge ${st.c}">${st.t}</span></td>
+          <td>
+            <a href="/violations/${v.id}" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">عرض</a>
+            ${(role==='VIOLATIONS_DEPT'||role==='ADMIN') && v.status==='unpaid'
+              ? `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();pay(${v.id})">تسديد</button>`
+              : ''}
+          </td>
+        </tr>`;
+    }).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function pay(id) {
+  if (!confirm('هل استلمت المبلغ نقداً من المواطن؟')) return;
+  const res  = await fetch(`/api/v1/violations/${id}/pay`, { method:'POST', headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) load();
+  else alert(data.message);
+}
+
+async function loadStats() {
+  // جلب الإحصاء الكامل
+  try {
+    const res  = await fetch(`/api/v1/violations?limit=1&status=unpaid`, { headers:{Authorization:'Bearer '+T} });
+    const d    = await res.json();
+    if (d.success) document.getElementById('s-unpaid').textContent = d.data.total;
+    const res2 = await fetch(`/api/v1/violations?limit=1&status=paid`, { headers:{Authorization:'Bearer '+T} });
+    const d2   = await res2.json();
+    if (d2.success) document.getElementById('s-paid').textContent = d2.data.total;
+  } catch (_) {}
+}
+
+function pg(d) { page = Math.max(1, page+d); load(); }
+document.getElementById('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { page=1; load(); }, 400); });
+document.getElementById('status-filter').addEventListener('change', () => { page=1; load(); });
+load(); loadStats();
+</script>
+</body>
+</html>

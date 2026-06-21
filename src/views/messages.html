@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الرسائل الداخلية — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .msg-item{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+    .msg-item:hover{background:var(--surface-3);}
+    .msg-item.unread{background:var(--blue-bg);border-right:3px solid var(--blue);}
+    .msg-item.active{background:var(--surface-3);}
+    .step-form{background:var(--surface-3);border-radius:10px;padding:16px;margin-top:14px;border:1px solid var(--border);}
+    .step-form h4{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--blue);}
+    .inline-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .action-btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+    .action-btns .btn{flex:1;padding:12px;font-size:13px;}
+  </style>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>الرسائل</span></div>
+      <h1 class="page-title">الرسائل الداخلية</h1>
+    </div>
+  </div>
+
+  <div id="main-alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:calc(100vh - 200px);">
+    <!-- القائمة -->
+    <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
+      <div class="card-header" style="justify-content:space-between;">
+        📥 البريد الوارد
+        <button onclick="loadList()" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;">↻</button>
+      </div>
+      <div id="msg-list" style="flex:1;overflow-y:auto;font-size:13px;">
+        <div style="padding:20px;text-align:center;color:var(--text-4);">جارٍ التحميل...</div>
+      </div>
+    </div>
+
+    <!-- التفاصيل + الإجراء المباشر -->
+    <div class="card" id="msg-detail" style="overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-4);">
+        <div style="text-align:center;opacity:.4;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <p style="margin-top:10px;font-size:13px;">اختر رسالة</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+
+const MSG_TYPE_LABELS = {
+  registration_request: '📋 طلب تسجيل مركبة',
+  inspection_request:   '🔧 طلب فحص فني',
+  inspection_result:    '✅ نتيجة فحص فني',
+  final_approval:       '📋 طلب اعتماد نهائي',
+  approval_request:     '📋 طلب اعتماد',
+  plate_request:        '🖨️ أمر طباعة لوحة',
+  transfer_request:     '🔄 طلب نقل ملكية',
+  transfer_final:       '📋 اعتماد نقل ملكية نهائي',
+  citizen_report:       '🚨 بلاغ سرقة/ضياع لوحة',
+  citizen_report_cancelled: '🔓 إلغاء بلاغ من المواطن',
+  plate_reissue_request: '🏷️ طلب لوحة بديلة',
+  general:              '📨 رسالة عامة',
+};
+
+let msgs = [];
+let currentMsg = null;
+
+async function loadList() {
+  const res  = await fetch('/api/v1/messages',{headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) return;
+  msgs = data.data;
+
+  if (!msgs.length) {
+    document.getElementById('msg-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-4);">لا توجد رسائل</div>';
+    return;
+  }
+  document.getElementById('msg-list').innerHTML = msgs.map(m => `
+    <div class="msg-item ${!m.is_read?'unread':''}" id="mi-${m.id}" onclick="showMsg(${m.id})">
+      <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+        <span style="font-weight:${m.is_read?500:700};color:var(--text-2);">${m.from_name||'—'}</span>
+        <span style="font-size:10px;color:var(--text-4);">${(m.created_at||'').split('T')[0]}</span>
+      </div>
+      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text-3);">${m.subject||''}</div>
+      <div style="font-size:10px;color:var(--text-4);margin-top:2px;">${MSG_TYPE_LABELS[m.msg_type]||m.msg_type}</div>
+    </div>`).join('');
+}
+
+function getPendingId(m) {
+  if (m.reference_id) return m.reference_id;
+  const match = (m.body||'').match(/رقم الطلب: #(\d+)|#(\d+)/);
+  return match ? parseInt(match[1]||match[2]) : null;
+}
+
+async function showMsg(id) {
+  const m = msgs.find(x=>x.id===id);
+  if (!m) return;
+  currentMsg = m;
+
+  // تعيين كمقروء
+  fetch(`/api/v1/messages/${id}/read`,{method:'POST',headers:{Authorization:'Bearer '+T}});
+  document.querySelectorAll('.msg-item').forEach(el=>el.classList.remove('active'));
+  const el = document.getElementById(`mi-${id}`);
+  if (el) { el.classList.remove('unread'); el.classList.add('active'); }
+
+  const rid = getPendingId(m);
+  const detail = document.getElementById('msg-detail');
+
+  // بناء محتوى الرسالة
+  let actionHTML = '';
+
+  // ── STEP 2: ADMIN يوافق على طلب التسجيل ─────────────────────
+  if (role==='ADMIN' && m.msg_type==='registration_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>📋 قرار الموافقة على طلب التسجيل</h4>
+        <div class="form-group">
+          <label class="form-label">سبب الرفض (اتركه فارغاً للموافقة)</label>
+          <input class="form-input" id="reject-reason" placeholder="اختياري — فقط عند الرفض">
+        </div>
+        <div class="action-btns">
+          <button class="btn btn-success" onclick="adminApproveStep2(${rid})">✅ موافقة — إرسال لقسم الفحص الفني</button>
+          <button class="btn btn-danger" onclick="adminRejectStep2(${rid})">❌ رفض الطلب</button>
+        </div>
+      </div>`;
+  }
+
+  // ── STEP 3: REG_CHIEF يرسل لقسم الفحص ─────────────────────
+  else if (role==='REG_CHIEF' && m.msg_type==='registration_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>📤 إرسال بيانات المالك لقسم الفحص الفني</h4>
+        <p style="font-size:12px;color:var(--text-3);margin-bottom:12px;">وافق المدير — انقر لإرسال البيانات لقسم الفحص مباشرة</p>
+        <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="sendToInspection(${rid})">
+          📤 إرسال للفحص الفني الآن
+        </button>
+      </div>`;
+  }
+
+  // ── STEP 4: INSP_CHIEF يُدخل بيانات الفحص مباشرة ──────────
+  else if (role==='INSP_CHIEF' && (m.msg_type==='inspection_request'||m.msg_type==='inspection_result')) {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🔧 إدخال بيانات المركبة والفحص الفني</h4>
+        <div class="inline-grid">
+          <div class="form-group">
+            <label class="form-label">نوع المركبة <span class="req">*</span></label>
+            <select class="form-select" id="i-vtype">
+              <option value="">— اختر —</option>
+              <option>سيارة خاصة</option><option>سيارة ركوب عامة</option>
+              <option>سيارة حافلة</option><option>سيارة نقل بضائع</option>
+              <option>سيارة جرارة</option><option>مركبة مقطورة</option>
+              <option>دراجة نارية</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهيكل <span class="req">*</span></label>
+            <input class="form-input" id="i-chassis" dir="ltr" placeholder="VIN">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الصانع <span class="req">*</span></label>
+            <input class="form-input" id="i-make" placeholder="Toyota">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الموديل <span class="req">*</span></label>
+            <input class="form-input" id="i-model" placeholder="Camry">
+          </div>
+          <div class="form-group">
+            <label class="form-label">سنة الصنع <span class="req">*</span></label>
+            <input class="form-input" id="i-year" type="number" placeholder="2020" min="1970" max="2030">
+          </div>
+          <div class="form-group">
+            <label class="form-label">اللون <span class="req">*</span></label>
+            <input class="form-input" id="i-color" placeholder="أبيض">
+          </div>
+          <div class="form-group">
+            <label class="form-label">نتيجة الفحص <span class="req">*</span></label>
+            <select class="form-select" id="i-result" onchange="setInspExpiry()">
+              <option value="">— اختر —</option>
+              <option value="صالحة">✅ صالحة</option>
+              <option value="غير صالحة">❌ غير صالحة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">صالح حتى</label>
+            <input class="form-input" id="i-expiry" type="date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم المحرك</label>
+            <input class="form-input" id="i-engine" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رسم الفحص (د.ل)</label>
+            <input class="form-input" id="i-fee" type="number" step="0.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">بلد المنشأ</label>
+            <input class="form-input" id="i-origin">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الوقود</label>
+            <select class="form-select" id="i-fuel">
+              <option>بنزين</option><option>ديزل</option><option>غاز</option><option>كهربائي</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ملاحظات الفحص</label>
+          <textarea class="form-input" id="i-notes" rows="2"></textarea>
+        </div>
+        <div class="alert alert-warning" style="font-size:12px;margin:8px 0;">
+          ⚠️ لا تُدخل البل هنا — البل يُدخله قسم التسجيل بعد استلام هذه البيانات
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="submitInspection(${rid})">
+          ✅ إرسال بيانات الفحص لقسم التسجيل
+        </button>
+      </div>`;
+  }
+
+  // ── STEP 5: REG_CHIEF يُدخل البل ويولّد اللوحة ─────────────
+  else if (role==='REG_CHIEF' && m.msg_type==='inspection_result') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>📄 إدخال البل وتوليد اللوحة و QR</h4>
+        <div class="inline-grid">
+          <div class="form-group">
+            <label class="form-label">رقم البل</label>
+            <input class="form-input" id="b-number" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رسم البل (د.ل)</label>
+            <input class="form-input" id="b-fee" type="number" step="0.5">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="form-label">صالح حتى <span class="req">*</span></label>
+            <input class="form-input" id="b-expiry" type="date">
+          </div>
+        </div>
+        <div class="alert alert-info" style="font-size:12px;margin:8px 0;">
+          🏁 سيُولَّد رقم اللوحة و QR تلقائياً وترسل للمدير للاعتماد النهائي
+        </div>
+        <button class="btn btn-success" style="width:100%;padding:12px;" onclick="generatePlate(${rid})">
+          🏁 توليد اللوحة و QR وإرسال للمدير
+        </button>
+        <div id="plate-result" style="display:none;margin-top:10px;background:var(--blue-bg);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text-3);">اللوحة المولَّدة</div>
+          <div id="plate-num" style="font-size:22px;font-weight:900;font-family:monospace;color:var(--blue);"></div>
+        </div>
+      </div>`;
+  }
+
+  // ── STEP 6: ADMIN اعتماد نهائي ─────────────────────────────
+  else if (role==='ADMIN' && (m.msg_type==='final_approval'||m.msg_type==='approval_request')) {
+    actionHTML = `
+      <div class="step-form">
+        <h4>📋 الاعتماد النهائي — إرسال لقسم اللوحات</h4>
+        <div class="form-group">
+          <label class="form-label">سبب الرفض (اتركه فارغاً للموافقة)</label>
+          <input class="form-input" id="final-reason" placeholder="اختياري">
+        </div>
+        <div class="action-btns">
+          <button class="btn btn-success" onclick="finalApprove(${rid})">✅ اعتماد نهائي وإرسال لقسم اللوحات</button>
+          <button class="btn btn-danger"  onclick="finalReject(${rid})">❌ رفض</button>
+        </div>
+      </div>`;
+  }
+
+  // ── STEP 7: PLATE_DEPT إصدار اللوحة ───────────────────────
+  else if (role==='PLATE_DEPT' && m.msg_type==='plate_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🖨️ إصدار اللوحة المعدنية</h4>
+        <div class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">
+          💰 تأكد من استلام رسم اللوحة (30 دينار) من المواطن
+        </div>
+        <button class="btn btn-success" style="width:100%;padding:13px;font-size:14px;" onclick="issuePlate(${rid})">
+          🖨️ تأكيد الاستلام وإصدار اللوحة الآن
+        </button>
+      </div>`;
+  }
+
+  // ── PLATE_DEPT: طلب استخراج لوحة بديلة (ضياع/سرقة مؤكد) ────
+  else if (role==='PLATE_DEPT' && m.msg_type==='plate_reissue_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🏷️ استخراج لوحة بديلة (نفس رقم اللوحة)</h4>
+        <div class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">
+          ⚠️ تأكد من تحصيل الرسم نقداً قبل تأكيد الإصدار — لا يمكن التراجع بعد التأكيد
+        </div>
+        <div class="form-group">
+          <label class="form-label">المبلغ المحصَّل (د.ل)</label>
+          <input class="form-input" id="reissue-fee-${rid}" type="number" min="0" step="0.5" placeholder="مثال: 30">
+        </div>
+        <button class="btn btn-success" style="width:100%;padding:13px;font-size:14px;" onclick="completePlateReissue(${rid})">
+          ✅ تأكيد التحصيل وإصدار اللوحة البديلة
+        </button>
+      </div>`;
+  }
+
+  // ── طلب مواطن جديد — REG_CHIEF ────────────────────────────
+  else if (role==='REG_CHIEF' && m.msg_type==='citizen_request') {
+    const refMatch = (m.body||'').match(/رقم المراجعة: (\d+)/);
+    const refNum   = refMatch ? refMatch[1] : '';
+    actions = `
+      <div style="margin-top:14px;">
+        <div style="background:var(--surface-3);border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">رقم المراجعة</div>
+          <div style="font-size:28px;font-weight:900;font-family:monospace;color:var(--blue);letter-spacing:4px;">
+            ${refNum || '—'}
+          </div>
+          <div style="font-size:11px;color:var(--text-4);margin-top:4px;">
+            اطلب من المواطن هذا الرقم للبحث عن طلبه
+          </div>
+        </div>
+        <a href="/citizen-requests?review=${refNum}"
+           class="btn btn-primary btn-block" style="padding:13px;text-align:center;display:block;font-size:14px;">
+          👤 فتح طلب المواطن مباشرة
+        </a>
+      </div>`;
+  }
+
+  // ── طلب مواطن جديد — ADMIN للإطلاع ─────────────────────
+  else if (role==='ADMIN' && m.msg_type==='citizen_request') {
+    const refMatch2 = (m.body||'').match(/رقم المراجعة: (\d+)/);
+    const refNum2   = refMatch2 ? refMatch2[1] : '';
+    actions = `
+      <div style="margin-top:14px;">
+        <div class="alert alert-info" style="font-size:12px;">
+          📋 طلب تسجيل مواطن جديد — رقم المراجعة: 
+          <strong style="font-family:monospace;">${refNum2}</strong>
+          — سيعالجه قسم التسجيل
+        </div>
+      </div>`;
+  }
+
+  // ── نقل الملكية — ADMIN موافقة أولى ────────────────────────
+  else if (role==='ADMIN' && m.msg_type==='transfer_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🔄 قرار نقل الملكية</h4>
+        <div class="form-group">
+          <label class="form-label">سبب الرفض (اختياري)</label>
+          <input class="form-input" id="tr-reason">
+        </div>
+        <div class="action-btns">
+          <button class="btn btn-success" onclick="transferDecide(${rid},'approved')">✅ موافقة</button>
+          <button class="btn btn-danger"  onclick="transferDecide(${rid},'rejected')">❌ رفض</button>
+        </div>
+      </div>`;
+  }
+
+  // ── نقل الملكية — ADMIN اعتماد نهائي ───────────────────────
+  else if (role==='ADMIN' && m.msg_type==='transfer_final') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>📋 الاعتماد النهائي لنقل الملكية</h4>
+        <div class="action-btns">
+          <button class="btn btn-success" onclick="transferFinal(${rid},'approved')">✅ اعتماد وإرسال لقسم اللوحات</button>
+          <button class="btn btn-danger"  onclick="transferFinal(${rid},'rejected')">❌ رفض</button>
+        </div>
+      </div>`;
+  }
+
+  // ── نقل الملكية — REG_CHIEF إدخال بيانات المشتري ───────────
+  else if (role==='REG_CHIEF' && m.msg_type==='transfer_request') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>👤 إدخال بيانات المشتري (المالك الجديد)</h4>
+        <div class="inline-grid">
+          <div class="form-group"><label class="form-label">الاسم الكامل <span class="req">*</span></label><input class="form-input" id="t-name"></div>
+          <div class="form-group"><label class="form-label">الرقم الوطني <span class="req">*</span></label><input class="form-input" id="t-nid" maxlength="12" dir="ltr"></div>
+          <div class="form-group"><label class="form-label">رقم البطاقة</label><input class="form-input" id="t-card" dir="ltr"></div>
+          <div class="form-group"><label class="form-label">رخصة القيادة</label><input class="form-input" id="t-license" dir="ltr"></div>
+          <div class="form-group"><label class="form-label">رقم الهاتف</label><input class="form-input" id="t-phone" dir="ltr"></div>
+          <div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="t-address"></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:12px;margin-top:8px;" onclick="submitBuyer(${rid})">
+          إرسال للمدير للاعتماد النهائي
+        </button>
+      </div>`;
+  }
+
+  // ── بلاغ سرقة/ضياع لوحة — ADMIN (رئيس قسم المرور) أو REG_CHIEF (قسم التسجيل) ─
+  else if ((role==='ADMIN'||role==='REG_CHIEF') && m.msg_type==='citizen_report') {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🚨 قرار البلاغ — ${role==='ADMIN'?'رئيس قسم المرور':'قسم التسجيل'}</h4>
+        ${m.report_photo ? `
+        <div class="form-group">
+          <label class="form-label">📷 الصورة المرسلة مع البلاغ</label>
+          <a href="${m.report_photo}" target="_blank">
+            <img src="${m.report_photo}" alt="صورة البلاغ" style="max-width:100%;max-height:320px;border-radius:8px;border:1px solid var(--border);display:block;cursor:zoom-in;">
+          </a>
+        </div>` : ''}
+        <div class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">
+          ⚠️ يلزم موافقة كل من رئيس قسم المرور وقسم التسجيل لتفعيل حالة "مسروقة/ضياع اللوحة" على المركبة وإشعار المواطن بالإيميل. رفض أي جهة منهما يُغلق البلاغ فوراً.
+        </div>
+        <div class="form-group">
+          <label class="form-label">سبب الرفض (اتركه فارغاً للموافقة)</label>
+          <input class="form-input" id="cr-reason" placeholder="اختياري — فقط عند الرفض">
+        </div>
+        <div class="action-btns">
+          <button class="btn btn-success" onclick="decideCitizenReport(${rid},'approve')">✅ موافقة على البلاغ</button>
+          <button class="btn btn-danger"  onclick="decideCitizenReport(${rid},'reject')">❌ رفض البلاغ</button>
+        </div>
+      </div>`;
+  }
+
+  // ── نقل الملكية — PLATE_DEPT ────────────────────────────────
+  else if (role==='PLATE_DEPT' && m.msg_type==='plate_request' && (m.body||'').includes('نقل ملكية')) {
+    actionHTML = `
+      <div class="step-form">
+        <h4>🏷️ إصدار لوحة نقل الملكية</h4>
+        <div class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">💰 استلم رسم اللوحة (30 دينار)</div>
+        <button class="btn btn-success" style="width:100%;padding:12px;" onclick="issueTransferPlate(${rid})">
+          🏷️ إصدار اللوحة الجديدة
+        </button>
+      </div>`;
+  }
+
+  detail.innerHTML = `
+    <div class="card-header">
+      ${MSG_TYPE_LABELS[m.msg_type]||'📨 رسالة'}
+      <span style="margin-right:auto;font-size:11px;color:var(--text-4);">${m.is_read?'✓ مقروء':'● جديد'}</span>
+    </div>
+    <div class="card-body">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:8px;">${m.subject||''}</h2>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">
+        من: <strong>${m.from_name||'—'}</strong> (${m.from_role||''}) · ${(m.created_at||'').replace('T',' ').split('.')[0]}
+      </div>
+      <div style="background:var(--surface-3);border-radius:8px;padding:14px;font-size:13px;line-height:2;white-space:pre-wrap;border:1px solid var(--border);">${m.body||''}</div>
+      ${m.rejection_reason ? `<div class="alert alert-error" style="margin-top:12px;">سبب الرفض: ${m.rejection_reason}</div>` : ''}
+      ${actionHTML}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// دوال الإجراءات المباشرة
+// ══════════════════════════════════════════════════════════════
+
+// STEP 2: ADMIN يوافق
+async function adminApproveStep2(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  await callAPI('/api/v1/vehicles/step2/decision',
+    {pending_id:pendingId,decision:'approved'},
+    '✅ تمت الموافقة — أُرسل إشعار لقسم التسجيل');
+}
+
+async function adminRejectStep2(pendingId) {
+  const reason = document.getElementById('reject-reason')?.value?.trim();
+  if (!reason) return showAlert('أدخل سبب الرفض','error');
+  await callAPI('/api/v1/vehicles/step2/decision',
+    {pending_id:pendingId,decision:'rejected',reason},
+    '❌ تم رفض الطلب');
+}
+
+// STEP 3: REG_CHIEF يرسل للفحص
+async function sendToInspection(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  await callAPI('/api/v1/vehicles/step3/send-to-inspection',
+    {pending_id:pendingId},
+    '✅ تم إرسال بيانات المالك لقسم الفحص الفني');
+}
+
+// STEP 4: INSP_CHIEF يُدخل الفحص
+async function submitInspection(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  const vtype  = document.getElementById('i-vtype')?.value;
+  const chassis= document.getElementById('i-chassis')?.value.trim();
+  const make   = document.getElementById('i-make')?.value.trim();
+  const model  = document.getElementById('i-model')?.value.trim();
+  const year   = document.getElementById('i-year')?.value;
+  const color  = document.getElementById('i-color')?.value.trim();
+  const result = document.getElementById('i-result')?.value;
+
+  if (!vtype||!chassis||!make||!model||!year||!color||!result)
+    return showAlert('أكمل الحقول الأساسية للمركبة والفحص','error');
+
+  await callAPI('/api/v1/vehicles/step4/inspection', {
+    pending_id:          pendingId,
+    vehicle_type:        vtype,
+    chassis_number:      chassis,
+    engine_number:       document.getElementById('i-engine')?.value.trim(),
+    make, model, year:   parseInt(year), color,
+    country_of_origin:   document.getElementById('i-origin')?.value.trim(),
+    fuel_type:           document.getElementById('i-fuel')?.value,
+    inspection_result:   result,
+    inspection_notes:    document.getElementById('i-notes')?.value.trim(),
+    inspection_fee:      parseFloat(document.getElementById('i-fee')?.value)||null,
+    inspection_valid_until: document.getElementById('i-expiry')?.value,
+  }, '✅ تم إرسال بيانات الفحص لقسم التسجيل');
+}
+
+function setInspExpiry() {
+  if (document.getElementById('i-result')?.value==='صالحة') {
+    const d=new Date(); d.setFullYear(d.getFullYear()+1);
+    if (document.getElementById('i-expiry'))
+      document.getElementById('i-expiry').value=d.toISOString().split('T')[0];
+  }
+}
+
+// STEP 5: REG_CHIEF يولّد اللوحة
+async function generatePlate(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  const expiry = document.getElementById('b-expiry')?.value;
+  if (!expiry) return showAlert('تاريخ انتهاء البل مطلوب','error');
+
+  const res = await fetch('/api/v1/vehicles/step5/generate-plate', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({
+      pending_id: pendingId,
+      bel_number: document.getElementById('b-number')?.value.trim(),
+      bel_fee:    parseFloat(document.getElementById('b-fee')?.value)||null,
+      bel_valid_until: expiry,
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('plate-result').style.display='block';
+    document.getElementById('plate-num').textContent = data.data.plate_number;
+    showAlert(`✅ اللوحة المولَّدة: ${data.data.plate_number} — أُرسل للمدير للاعتماد النهائي`,'success');
+    setTimeout(loadList, 2000);
+  } else showAlert(data.message||'خطأ','error');
+}
+
+// STEP 6: ADMIN اعتماد نهائي
+async function finalApprove(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  await callAPI('/api/v1/vehicles/step6/final-approval',
+    {pending_id:pendingId,decision:'approved'},
+    '✅ اعتماد نهائي — أُرسل أمر الطباعة لقسم اللوحات');
+}
+
+async function finalReject(pendingId) {
+  const reason = document.getElementById('final-reason')?.value.trim();
+  if (!reason) return showAlert('أدخل سبب الرفض','error');
+  await callAPI('/api/v1/vehicles/step6/final-approval',
+    {pending_id:pendingId,decision:'rejected',reason},
+    '❌ تم الرفض');
+}
+
+// STEP 7: PLATE_DEPT إصدار اللوحة
+async function issuePlate(pendingId) {
+  if (!pendingId) return showAlert('لم يتم تحديد رقم الطلب','error');
+  if (!confirm('تأكيد استلام 30 دينار وإصدار اللوحة؟')) return;
+  await callAPI('/api/v1/vehicles/step7/issue-plate',
+    {pending_id:pendingId,fee_paid:30},
+    '✅ تم إصدار اللوحة بنجاح');
+}
+
+// PLATE_DEPT: تأكيد تحصيل رسم اللوحة البديلة وإصدارها (ضياع/سرقة مؤكد)
+async function completePlateReissue(reportId) {
+  if (!reportId) return showAlert('لم يتم تحديد رقم البلاغ','error');
+  const feeInput = document.getElementById(`reissue-fee-${reportId}`);
+  const fee = parseFloat(feeInput?.value);
+  if (!Number.isFinite(fee) || fee < 0) return showAlert('أدخل مبلغ الرسم المحصَّل','error');
+  if (!confirm(`تأكيد تحصيل ${fee} د.ل وإصدار اللوحة البديلة؟ لا يمكن التراجع بعد التأكيد.`)) return;
+  await callAPI(`/api/v1/citizen-reports/${reportId}/complete-reissue`,
+    {fee_amount:fee},
+    '✅ تم تحصيل الرسم وإصدار اللوحة البديلة بنجاح');
+}
+
+// نقل الملكية
+async function transferDecide(id, decision) {
+  const reason = document.getElementById('tr-reason')?.value.trim();
+  if (decision==='rejected'&&!reason) return showAlert('أدخل سبب الرفض','error');
+  await callAPI('/api/v1/transfers/admin-decision',{transfer_id:id,decision,reason},'✅ تم');
+}
+async function transferFinal(id, decision) {
+  await callAPI('/api/v1/transfers/final-approval',{transfer_id:id,decision},'✅ تم الاعتماد النهائي');
+}
+async function submitBuyer(id) {
+  const nid=document.getElementById('t-nid')?.value.trim();
+  const name=document.getElementById('t-name')?.value.trim();
+  if (!nid||!name) return showAlert('الاسم والرقم الوطني مطلوبان','error');
+  await callAPI('/api/v1/transfers/buyer-data',{
+    transfer_id:id,to_owner_national_id:nid,to_owner_name:name,
+    to_owner_id_card:document.getElementById('t-card')?.value,
+    to_driving_license:document.getElementById('t-license')?.value,
+    to_owner_phone:document.getElementById('t-phone')?.value,
+    to_address:document.getElementById('t-address')?.value,
+  },'✅ تم إرسال للمدير');
+}
+async function issueTransferPlate(id) {
+  if (!confirm('تأكيد إصدار لوحة نقل الملكية؟')) return;
+  await callAPI('/api/v1/transfers/issue-plate',{transfer_id:id,fee_paid:30},'✅ تم إصدار اللوحة');
+}
+
+// بلاغ سرقة/ضياع لوحة
+async function decideCitizenReport(reportId, decision) {
+  if (!reportId) return showAlert('لم يتم تحديد رقم البلاغ','error');
+  const reason = document.getElementById('cr-reason')?.value?.trim();
+  if (decision==='reject' && !reason) return showAlert('أدخل سبب الرفض','error');
+  await callAPI(`/api/v1/citizen-reports/${reportId}/decision`,
+    { decision, notes: reason||null },
+    decision==='approve' ? '✅ تم تسجيل موافقتك على البلاغ' : '❌ تم رفض البلاغ');
+}
+
+// ── دالة مشتركة للـ API calls ─────────────────────────────────
+async function callAPI(endpoint, body, successMsg) {
+  try {
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAlert(successMsg,'success');
+      setTimeout(loadList, 1500);
+    } else {
+      showAlert(data.message||'حدث خطأ','error');
+    }
+  } catch(e) {
+    showAlert('❌ خطأ في الاتصال: '+e.message,'error');
+  }
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('main-alert');
+  el.className = `alert alert-${type==='error'?'error':type==='info'?'info':'success'}`;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  if (type!=='success') setTimeout(()=>el.style.display='none',6000);
+}
+
+loadList();
+setInterval(loadList, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اعتماد التسجيل — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>اعتماد طلب تسجيل</span></div>
+          <h1 class="page-title">مراجعة واعتماد طلب تسجيل</h1>
+        </div>
+      </div>
+
+      <div id="alert" class="alert" style="display:none;"></div>
+      <div id="content"><div class="card"><div class="card-body"><p class="text-center text-muted">جارٍ التحميل...</p></div></div></div>
+    </div>
+  </div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+const pendingId = location.pathname.split('/').pop();
+let pending;
+
+async function load() {
+  const res  = await fetch(`/api/v1/vehicles/pending/${pendingId}`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) return alertMsg('الطلب غير موجود', 'error');
+  pending = data.data;
+
+  // الخطوة 1 أو الخطوة 5؟
+  const isStep1 = pending.status === 'step1_pending_admin';
+  const isStep5 = pending.status === 'step5_pending_final_approval';
+
+  if (isStep1) {
+    renderStep1();
+  } else if (isStep5) {
+    renderStep5();
+  } else {
+    document.getElementById('content').innerHTML = `<div class="alert alert-info">حالة الطلب: ${pending.status}</div>`;
+  }
+}
+
+function renderStep1() {
+  const photoHtml = pending.photo_path
+    ? `<img src="${pending.photo_path}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--blue);margin-bottom:8px;">`
+    : `<div style="width:90px;height:90px;border-radius:50%;background:var(--bg);border:3px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:8px;">👤</div>`;
+
+  document.getElementById('content').innerHTML = `
+    <div class="alert alert-info">📋 طلب تسجيل جديد — الموافقة الأولى</div>
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;">
+        <span>بيانات المالك</span>
+        <button class="btn btn-secondary" onclick="printOfficialForm()" style="font-size:12px;padding:6px 14px;">
+          🖨️ طباعة النموذج الرسمي
+        </button>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:16px;">
+          <div style="text-align:center;flex-shrink:0;">
+            ${photoHtml}
+            <div style="font-size:11px;color:var(--text-4);">الصورة الشخصية</div>
+          </div>
+          <div class="form-grid-2" style="flex:1;">
+            <div><div class="td-label">الاسم الكامل</div><div class="fw-7">${pending.owner_name}</div></div>
+            <div><div class="td-label">الرقم الوطني / الإداري</div><div class="font-mono">${pending.owner_national_id||'—'}</div></div>
+            <div><div class="td-label">البطاقة الشخصية</div><div>${pending.owner_id_card||'—'}</div></div>
+            <div><div class="td-label">جواز السفر</div><div>${pending.owner_passport||'—'}</div></div>
+            <div><div class="td-label">رخصة القيادة</div><div>${pending.driving_license||'—'}</div></div>
+            <div><div class="td-label">الهاتف</div><div>${pending.owner_phone||'—'}</div></div>
+          </div>
+        </div>
+        <div><div class="td-label">العنوان</div><div>${pending.address||'—'}</div></div>
+        ${pending.notes ? `<div style="margin-top:10px;"><div class="td-label">ملاحظات</div><div>${pending.notes}</div></div>` : ''}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+      <div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:12px;">قرار الموافقة الأولى</h3>
+        <div class="form-group"><label class="form-label">سبب الرفض (إن وجد)</label><input class="form-input" id="reason"></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-success" style="flex:1;padding:12px;" onclick="decide('approved', 'step2')">✅ موافقة وإرسال للفحص الفني</button>
+          <button class="btn btn-danger" style="flex:1;padding:12px;" onclick="decide('rejected', 'step2')">❌ رفض</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function printOfficialForm() {
+  const today = new Date().toLocaleDateString('ar-LY', {year:'numeric',month:'long',day:'numeric'});
+  const reviewNum = pending.review_number || pending.id || '—';
+  const photoSrc  = pending.photo_path || '';
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نموذج طلب تسجيل مركبة</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: Arial, 'Times New Roman', serif; direction:rtl; font-size:13px; color:#000; background:#fff; padding:20px; }
+  .page { max-width:740px; margin:0 auto; border:2px solid #000; padding:20px; min-height:1000px; position:relative; }
+  .header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px double #000; padding-bottom:14px; margin-bottom:14px; }
+  .logo { width:70px; height:70px; border:2px solid #000; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; }
+  .header-center { text-align:center; flex:1; }
+  .ministry { font-size:11px; font-weight:bold; letter-spacing:1px; }
+  .dept { font-size:15px; font-weight:bold; margin:4px 0; }
+  .form-title { font-size:18px; font-weight:bold; border:2px solid #000; padding:6px 20px; display:inline-block; margin-top:6px; }
+  .ref-box { text-align:left; font-size:12px; }
+  .photo-box { width:90px; height:110px; border:2px solid #000; display:flex; align-items:center; justify-content:center; font-size:11px; color:#666; overflow:hidden; }
+  .photo-box img { width:100%; height:100%; object-fit:cover; }
+  .info-table { width:100%; border-collapse:collapse; margin:14px 0; }
+  .info-table td { border:1px solid #000; padding:7px 10px; font-size:13px; }
+  .info-table .lbl { background:#f5f5f5; font-weight:bold; width:160px; white-space:nowrap; }
+  .section-title { font-size:13px; font-weight:bold; background:#e8e8e8; padding:6px 10px; border:1px solid #000; margin:12px 0 0; }
+  .sig-row { display:flex; justify-content:space-between; margin-top:40px; }
+  .sig-box { text-align:center; width:180px; }
+  .sig-line { border-top:1px solid #000; margin-top:40px; padding-top:6px; font-size:12px; }
+  .footer-note { font-size:10px; color:#555; text-align:center; border-top:1px solid #ccc; margin-top:20px; padding-top:8px; }
+  @media print { body { padding:0; } .page { border:none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="logo" style="overflow:hidden;display:flex;align-items:center;justify-content:center;">
+      <img src="/img/police-logo.png" style="width:70px;height:70px;object-fit:contain;" alt="شعار"
+           onerror="this.outerHTML='<span style=font-size:10px;text-align:center>وزارة<br>الداخلية</span>'">
+    </div>
+    <div class="header-center">
+      <div class="ministry">وزارة الداخلية — ليبيا</div>
+      <div class="ministry">مديرية أمن سبها</div>
+      <div class="dept">إدارة مرور سبها</div>
+      <div class="dept">قسم تسجيل المركبات</div>
+      <div class="form-title">نموذج طلب تسجيل مركبة</div>
+    </div>
+    <div class="ref-box">
+      <div>رقم: <strong>${reviewNum}</strong></div>
+      <div>التاريخ: ${today}</div>
+      <div style="margin-top:8px;">
+        <div class="photo-box">${photoSrc ? `<img src="${photoSrc}">` : 'الصورة الشخصية'}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">أولاً: بيانات المالك</div>
+  <table class="info-table">
+    <tr><td class="lbl">الاسم الكامل</td><td>${pending.owner_name||'—'}</td><td class="lbl">الرقم الوطني/الإداري</td><td>${pending.owner_national_id||'—'}</td></tr>
+    <tr><td class="lbl">رقم البطاقة الشخصية</td><td>${pending.owner_id_card||'—'}</td><td class="lbl">رقم جواز السفر</td><td>${pending.owner_passport||'—'}</td></tr>
+    <tr><td class="lbl">رخصة القيادة</td><td>${pending.driving_license||'—'}</td><td class="lbl">رقم الهاتف</td><td>${pending.owner_phone||'—'}</td></tr>
+    <tr><td class="lbl">العنوان</td><td colspan="3">${pending.address||'—'}</td></tr>
+  </table>
+
+  <div class="section-title">ثانياً: الوثائق المستلمة</div>
+  <table class="info-table">
+    <tr>
+      <td>☐ البطاقة الشخصية (أصل + صورة)</td>
+      <td>☐ شهادة الميلاد</td>
+      <td>☐ رخصة القيادة</td>
+    </tr>
+    <tr>
+      <td>☐ الطلب الكتابي الرسمي</td>
+      <td>☐ وثيقة ملكية المركبة</td>
+      <td></td>
+    </tr>
+  </table>
+
+  <div class="section-title">ثالثاً: ملاحظات</div>
+  <table class="info-table">
+    <tr><td style="height:50px;">${pending.notes||''}</td></tr>
+  </table>
+
+  <div class="section-title">رابعاً: قرار المدير</div>
+  <table class="info-table">
+    <tr><td style="height:40px;" colspan="2">☐ موافقة على الطلب &nbsp;&nbsp;&nbsp; ☐ رفض الطلب</td></tr>
+    <tr><td class="lbl">سبب الرفض (إن وجد)</td><td style="height:40px;"></td></tr>
+  </table>
+
+  <div class="sig-row">
+    <div class="sig-box"><div class="sig-line">موظف الاستقبال</div></div>
+    <div class="sig-box"><div class="sig-line">مدير الإدارة</div></div>
+    <div class="sig-box"><div class="sig-line">الختم الرسمي</div></div>
+  </div>
+
+  <div class="footer-note">هذا النموذج وثيقة رسمية — إدارة مرور سبها · مديرية أمن سبها · وزارة الداخلية الليبية</div>
+</div>
+<script>window.onload = () => window.print();</script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function renderStep5() {
+  const vd = pending.vehicle_data || {};
+  const id = pending.inspection_data || {};
+  const bd = pending.bel_data || {};
+
+  document.getElementById('content').innerHTML = `
+    <div class="alert alert-info">📋 طلب اعتماد نهائي — كل البيانات مكتملة</div>
+
+    <!-- اللوحة المولَّدة -->
+    <div class="card" style="background:linear-gradient(135deg, var(--navy), var(--navy-3));color:#fff;margin-bottom:14px;">
+      <div class="card-body" style="display:flex;align-items:center;gap:24px;">
+        <div>
+          <div style="font-size:11px;opacity:.6;letter-spacing:1px;margin-bottom:4px;">رقم اللوحة المولَّد تلقائياً</div>
+          <div style="font-size:32px;font-weight:900;font-family:monospace;letter-spacing:2px;">${bd.plate_number||'—'}</div>
+          <div style="font-size:12px;opacity:.7;margin-top:4px;">QR: ${(bd.qr_token||'').substring(0,16)}...</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div class="card">
+        <div class="card-header">المالك</div>
+        <div class="card-body">
+          <div class="td-label">الاسم</div><div class="fw-7">${pending.owner_name}</div>
+          <div class="td-label" style="margin-top:8px;">الرقم الوطني</div><div class="font-mono">${pending.owner_national_id}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">المركبة</div>
+        <div class="card-body">
+          <div class="td-label">النوع</div><div>${vd.vehicle_type||'—'}</div>
+          <div class="td-label" style="margin-top:8px;">الموديل</div><div>${vd.make||''} ${vd.model||''} ${vd.year||''}</div>
+          <div class="td-label" style="margin-top:8px;">الهيكل</div><div class="font-mono" style="font-size:11px;">${vd.chassis_number||'—'}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">الفحص والبل</div>
+        <div class="card-body">
+          <div class="td-label">الفحص</div><div><span class="badge ${id.result==='صالحة'?'badge-success':'badge-danger'}">${id.result||'—'}</span></div>
+          <div class="td-label" style="margin-top:8px;">صالح حتى</div><div>${id.valid_until||'—'}</div>
+          <div class="td-label" style="margin-top:8px;">البل حتى</div><div>${bd.bel_valid_until||'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border:2px solid var(--blue);">
+      <div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:12px;">القرار النهائي</h3>
+        <div class="form-group"><label class="form-label">سبب الرفض (إن وجد)</label><input class="form-input" id="reason"></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-success" style="flex:1;padding:13px;" onclick="decide('approved', 'step6')">✅ اعتماد وإرسال لقسم اللوحات للطباعة</button>
+          <button class="btn btn-danger" style="flex:1;padding:13px;" onclick="decide('rejected', 'step6')">❌ رفض</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function decide(decision, step) {
+  const reason = document.getElementById('reason')?.value?.trim() || '';
+  if (decision === 'rejected' && !reason) return alertMsg('يرجى إدخال سبب الرفض', 'error');
+  if (!confirm(decision==='approved' ? 'هل تريد الموافقة؟' : 'هل تريد الرفض؟')) return;
+
+  const endpoint = step === 'step2' ? '/api/v1/vehicles/step2/decision' : '/api/v1/vehicles/step6/final-approval';
+  const res  = await fetch(endpoint, {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({pending_id: parseInt(pendingId), decision, reason})
+  });
+  const data = await res.json();
+  if (data.success) { alertMsg(`✅ تم ${decision==='approved'?'الاعتماد':'الرفض'}`, 'success'); setTimeout(()=>location.href='/dashboard', 2000); }
+  else alertMsg(data.message, 'error');
+}
+
+function alertMsg(m, t) { const e=document.getElementById('alert'); e.className=`alert alert-${t==='error'?'error':'success'}`; e.textContent=m; e.style.display='flex'; if(t!=='success')setTimeout(()=>e.style.display='none', 5000); }
+
+load();
+</script>
+</body>
+</html>

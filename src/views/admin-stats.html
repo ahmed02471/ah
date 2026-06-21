@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الإحصاءات والتقارير — نظام مرور سبها</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="with-sidebar">
+    
+    
+    
+    
+
+    <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+        <div class="page-wrapper">
+
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">الإحصاءات والتقارير</h1>
+                    <p class="page-subtitle">ملخص شامل لأداء النظام والإيرادات</p>
+                </div>
+                <div class="page-actions">
+                    <select class="form-select" id="period-filter" style="max-width:160px;">
+                        <option value="month">هذا الشهر</option>
+                        <option value="quarter">هذا الربع</option>
+                        <option value="year">هذا العام</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="stats-grid" style="margin-bottom:24px;">
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+                    <div class="stat-body"><div class="stat-number" id="kpi-vehicles">—</div><div class="stat-label">إجمالي المركبات</div></div>
+                </div>
+                <div class="stat-card stat-green">
+                    <div class="stat-icon"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <div class="stat-body"><div class="stat-number" id="kpi-revenue">—</div><div class="stat-label">الإيرادات (د.ل)</div></div>
+                </div>
+                <div class="stat-card stat-red">
+                    <div class="stat-icon"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+                    <div class="stat-body"><div class="stat-number" id="kpi-violations">—</div><div class="stat-label">مخالفات محررة</div></div>
+                </div>
+                <div class="stat-card stat-yellow">
+                    <div class="stat-icon"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg></div>
+                    <div class="stat-body"><div class="stat-number" id="kpi-transfers">—</div><div class="stat-label">نقل ملكية</div></div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid-2" style="gap:20px;">
+
+                <!-- Top Violation Types -->
+                <div class="card">
+                    <div class="card-header">
+                        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        أكثر المخالفات تكراراً
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead><tr><th>#</th><th>نوع المخالفة</th><th>العدد</th><th>الإيرادات (د.ل)</th></tr></thead>
+                            <tbody id="top-violations-tbody">
+                                <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3);">جارٍ التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Monthly Revenue -->
+                <div class="card">
+                    <div class="card-header">
+                        <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        ملخص الإيرادات والمخالفات
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
+                            <tbody id="summary-tbody">
+                                <tr><td colspan="2" style="text-align:center;padding:24px;color:var(--text-3);">جارٍ التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Vehicles by Type -->
+            <div class="card" style="margin-top:20px;">
+                <div class="card-header">
+                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    توزيع المركبات حسب النوع
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr><th>نوع المركبة</th><th>العدد</th><th>النسبة</th><th>المخالفات غير المدفوعة</th></tr></thead>
+                        <tbody id="vehicles-by-type-tbody">
+                            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3);">جارٍ التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res  = await fetch('/api/v1/stats/dashboard', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) return;
+                const s = data.data;
+
+                const fmt = v => v != null ? Number(v).toLocaleString('ar-LY') : '—';
+                document.getElementById('kpi-vehicles').textContent   = fmt(s.total_vehicles);
+                document.getElementById('kpi-revenue').textContent    = fmt(s.revenue_month);
+                document.getElementById('kpi-violations').textContent = fmt(s.violations_month);
+                document.getElementById('kpi-transfers').textContent  = fmt(s.transfers_month);
+
+                // Summary table
+                const rows = [
+                    ['إجمالي المركبات',       fmt(s.total_vehicles)],
+                    ['مركبات نشطة',           fmt(s.active_vehicles)],
+                    ['مخالفات غير مدفوعة',    fmt(s.unpaid_violations)],
+                    ['مخالفات مدفوعة (الشهر)',fmt(s.paid_violations_month)],
+                    ['إيرادات الشهر',         fmt(s.revenue_month) + ' د.ل'],
+                    ['نقل ملكية معلق',        fmt(s.pending_transfers)],
+                    ['طلبات لوحات معلقة',     fmt(s.pending_plate_requests)],
+                    ['تأمين ينتهي قريباً',    fmt(s.expiring_insurance)],
+                ];
+                document.getElementById('summary-tbody').innerHTML = rows.map(([k,v]) =>
+                    `<tr><td style="font-weight:600;">${k}</td><td style="color:var(--primary);font-weight:700;">${v}</td></tr>`
+                ).join('');
+
+                // Top violations
+                if (s.top_violations?.length) {
+                    document.getElementById('top-violations-tbody').innerHTML = s.top_violations.map((v, i) => `
+                        <tr>
+                            <td style="color:var(--text-3);">${i+1}</td>
+                            <td style="font-weight:600;">${v.name_ar}</td>
+                            <td><span class="badge badge-red">${v.count}</span></td>
+                            <td style="color:var(--success);font-weight:700;">${Number(v.total_fines).toFixed(1)}</td>
+                        </tr>`).join('');
+                } else {
+                    document.getElementById('top-violations-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3);">لا توجد بيانات</td></tr>`;
+                }
+
+                // Vehicles by type
+                if (s.vehicles_by_type?.length) {
+                    const total = s.total_vehicles || 1;
+                    document.getElementById('vehicles-by-type-tbody').innerHTML = s.vehicles_by_type.map(t => `
+                        <tr>
+                            <td style="font-weight:600;">${t.vehicle_type}</td>
+                            <td>${t.count}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden;">
+                                        <div style="width:${Math.round(t.count/total*100)}%;height:100%;background:var(--primary);border-radius:99px;"></div>
+                                    </div>
+                                    <span style="font-size:.8rem;color:var(--text-2);">${Math.round(t.count/total*100)}%</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-red">${t.unpaid_violations || 0}</span></td>
+                        </tr>`).join('');
+                } else {
+                    document.getElementById('vehicles-by-type-tbody').innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3);">لا توجد بيانات</td></tr>`;
+                }
+
+            } catch(e) { console.error(e); }
+        }
+
+        document.getElementById('period-filter').addEventListener('change', loadStats);
+        loadStats();
+    </script>
+</body>
+</html>

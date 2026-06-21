@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الفحص الفني — بيانات المركبة</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div><script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a> › <a href="/vehicles/pending">الطلبات المعلّقة</a> › <span>فحص فني</span></div>
+      <h1 class="page-title">الخطوة 4 — إدخال بيانات المركبة والفحص</h1>
+      <p class="page-subtitle">قسم الفحص الفني · أدخل بيانات المركبة ونتيجة الفحص وأرسل لقسم التسجيل</p>
+    </div>
+  </div>
+
+  <!-- مؤشر الخطوات -->
+  <div style="display:flex;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+    <div style="flex:1;padding:10px 14px;background:var(--success);color:#fff;font-size:12px;">✓ تحقق المالك</div>
+    <div style="flex:1;padding:10px 14px;background:var(--success);color:#fff;font-size:12px;border-right:1px solid rgba(255,255,255,.2);">✓ موافقة المدير</div>
+    <div style="flex:1;padding:10px 14px;background:var(--success);color:#fff;font-size:12px;border-right:1px solid rgba(255,255,255,.2);">✓ إرسال للفحص</div>
+    <div style="flex:1;padding:10px 14px;background:var(--blue);color:#fff;font-size:12px;font-weight:700;border-right:1px solid rgba(255,255,255,.2);">4 · الفحص الفني ← أنت هنا</div>
+    <div style="flex:1;padding:10px 14px;background:var(--surface-2);color:var(--text-4);font-size:12px;border-right:1px solid var(--border);">5 · البل + اللوحة</div>
+    <div style="flex:1;padding:10px 14px;background:var(--surface-2);color:var(--text-4);font-size:12px;">6-7 · الإصدار</div>
+  </div>
+
+  <!-- بيانات المالك — من الإشعار -->
+  <div class="alert alert-info" id="owner-info" style="margin-bottom:16px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span id="owner-info-text">جارٍ تحميل بيانات المالك...</span>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:16px;"></div>
+  <input type="hidden" id="pending-id">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <!-- بيانات المركبة -->
+    <div class="card">
+      <div class="card-header">🚗 بيانات المركبة — من الكتيب الورقي</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">نوع المركبة <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="vehicle_type">
+            <option value="">— اختر —</option>
+            <option>سيارة خاصة</option><option>سيارة ركوب عامة</option>
+            <option>سيارة حافلة</option><option>سيارة نقل بضائع</option>
+            <option>سيارة جرارة</option><option>مركبة مقطورة</option>
+            <option>دراجة نارية</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">رقم الهيكل (الشاصي) <span style="color:var(--danger)">*</span></label>
+          <input class="form-input" id="chassis_number" dir="ltr" placeholder="KMHDU41BP7U0011S2">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group"><label class="form-label">الصانع <span style="color:var(--danger)">*</span></label><input class="form-input" id="make" placeholder="Toyota"></div>
+          <div class="form-group"><label class="form-label">الموديل <span style="color:var(--danger)">*</span></label><input class="form-input" id="model" placeholder="Camry"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div class="form-group"><label class="form-label">سنة الصنع <span style="color:var(--danger)">*</span></label><input class="form-input" id="year" type="number" placeholder="2020" min="1970" max="2030"></div>
+          <div class="form-group"><label class="form-label">اللون <span style="color:var(--danger)">*</span></label><input class="form-input" id="color" placeholder="أبيض"></div>
+          <div class="form-group"><label class="form-label">بلد الصنع</label><input class="form-input" id="country_of_origin" placeholder="كوريا"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">الوقود</label>
+            <select class="form-select" id="fuel_type">
+              <option>بنزين</option><option>ديزل</option><option>غاز</option><option>كهربائي</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">عدد الأسطوانات</label><input class="form-input" id="cylinders" type="number" placeholder="4"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group"><label class="form-label">عدد الركاب</label><input class="form-input" id="passenger_count" type="number" placeholder="4"></div>
+          <div class="form-group">
+            <label class="form-label">الاستخدام</label>
+            <select class="form-select" id="usage_type"><option>خاص</option><option>تجاري</option><option>حكومي</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">رقم المحرك</label><input class="form-input" id="engine_number" dir="ltr" placeholder="اختياري"></div>
+      </div>
+    </div>
+
+    <!-- الفحص الفني -->
+    <div class="card">
+      <div class="card-header">🔧 نتيجة الفحص الفني</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">نتيجة الفحص <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="inspection_result" onchange="autoSetExpiry()">
+            <option value="">— اختر —</option>
+            <option value="صالحة">✅ صالحة</option>
+            <option value="غير صالحة">❌ غير صالحة</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group"><label class="form-label">اسم الفاحص</label><input class="form-input" id="inspector_name" placeholder="اسم الفاحص"></div>
+          <div class="form-group"><label class="form-label">رسم الفحص (د.ل)</label><input class="form-input" id="inspection_fee" type="number" step="0.5" placeholder="المبلغ"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">صالح حتى</label>
+          <input class="form-input" id="inspection_valid_until" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ملاحظات الفحص</label>
+          <textarea class="form-input" id="inspection_notes" rows="3" placeholder="أي ملاحظات..."></textarea>
+        </div>
+
+        <div class="alert alert-warning" style="margin-top:12px;font-size:12px;">
+          ⚠️ لا تُدخل بيانات البل هنا — البل يُدخله قسم التسجيل بعد استلام هذه البيانات
+        </div>
+
+        <div class="alert alert-info" style="margin-top:8px;font-size:12px;">
+          🏁 توليد رقم اللوحة ورمز QR يتم تلقائياً في قسم التسجيل بعد إرسال هذه البيانات
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;display:flex;gap:10px;">
+    <button class="btn btn-primary" style="flex:1;padding:13px;" onclick="submit()">
+      ✅ إرسال بيانات الفحص لقسم التسجيل
+    </button>
+    <a href="/vehicles/pending" class="btn btn-secondary">إلغاء</a>
+  </div>
+
+</div></div>
+<script>
+const T  = localStorage.getItem('auth_token');
+const id = location.pathname.split('/').pop();
+
+async function load() {
+  if (!id || id==='new') return;
+  const res  = await fetch(`/api/v1/vehicles/pending/${id}`,{headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) return;
+  const p = data.data;
+  document.getElementById('pending-id').value = p.id;
+  document.getElementById('owner-info-text').textContent =
+    `المالك: ${p.owner_name} · الرقم الوطني: ${p.owner_national_id} · رخصة القيادة: ${p.driving_license||'—'} · هاتف: ${p.owner_phone||'—'}`;
+}
+
+function autoSetExpiry() {
+  if (document.getElementById('inspection_result').value==='صالحة') {
+    const d=new Date(); d.setFullYear(d.getFullYear()+1);
+    document.getElementById('inspection_valid_until').value=d.toISOString().split('T')[0];
+  }
+}
+
+async function submit() {
+  const pid = document.getElementById('pending-id').value || id;
+  const req = ['vehicle_type','chassis_number','make','model','year','color','inspection_result'];
+  for (const f of req) {
+    if (!document.getElementById(f).value.trim()) { showAlert(`حقل "${f}" مطلوب`,'error'); return; }
+  }
+  const body = {
+    pending_id: parseInt(pid),
+    vehicle_type: document.getElementById('vehicle_type').value,
+    chassis_number: document.getElementById('chassis_number').value.trim(),
+    engine_number: document.getElementById('engine_number').value.trim(),
+    make: document.getElementById('make').value.trim(),
+    model: document.getElementById('model').value.trim(),
+    year: parseInt(document.getElementById('year').value),
+    color: document.getElementById('color').value.trim(),
+    country_of_origin: document.getElementById('country_of_origin').value.trim(),
+    fuel_type: document.getElementById('fuel_type').value,
+    cylinders: parseInt(document.getElementById('cylinders').value)||null,
+    passenger_count: parseInt(document.getElementById('passenger_count').value)||null,
+    usage_type: document.getElementById('usage_type').value,
+    inspection_result: document.getElementById('inspection_result').value,
+    inspection_notes: document.getElementById('inspection_notes').value.trim(),
+    inspection_fee: parseFloat(document.getElementById('inspection_fee').value)||null,
+    inspection_valid_until: document.getElementById('inspection_valid_until').value,
+    inspector_name: document.getElementById('inspector_name').value.trim(),
+  };
+  const res  = await fetch('/api/v1/vehicles/step4/inspection',{method:'POST',headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await res.json();
+  if (data.success) { showAlert('✅ تم إرسال بيانات الفحص لقسم التسجيل','success'); setTimeout(()=>location.href='/vehicles/pending',2000); }
+  else showAlert(data.message||'خطأ','error');
+}
+function showAlert(msg,type){const el=document.getElementById('alert');el.className=`alert alert-${type==='error'?'error':'success'}`;el.textContent=msg;el.style.display='flex';if(type!=='success')setTimeout(()=>el.style.display='none',5000);}
+load();
+</script>
+</body>
+</html>

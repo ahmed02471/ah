@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلبات المواطنين — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>طلبات المواطنين</span></div>
+      <h1 class="page-title">طلبات تسجيل المواطنين</h1>
+      <p class="page-subtitle">مراجعة الطلبات واستكمال إجراءات التسجيل</p>
+    </div>
+  </div>
+
+  <!-- شريط البحث -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-body">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="position:relative;flex:1;">
+          <input class="form-input" id="search-q" placeholder="ابحث برقم المراجعة أو الرقم الوطني أو الاسم..."
+            onkeydown="if(event.key==='Enter')search()" style="padding-right:38px;">
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-4);">🔍</span>
+        </div>
+        <button class="btn btn-primary" onclick="search()">بحث</button>
+        <button class="btn btn-secondary" onclick="loadAll()">كل الطلبات</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+  <div id="list"></div>
+
+</div></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Panel تفاصيل الطلب + إدخال البيانات
+════════════════════════════════════════════════════════════ -->
+<div id="detail-panel" style="display:none;position:fixed;inset:0;z-index:50;display:none;overflow-y:auto;background:var(--bg);">
+  <div style="max-width:900px;margin:0 auto;padding:20px;">
+
+    <!-- رأس الصفحة -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <button onclick="closeDetail()" class="btn btn-secondary">← رجوع</button>
+      <div>
+        <h2 style="font-size:18px;font-weight:700;" id="dp-title">تفاصيل الطلب</h2>
+        <p style="font-size:12px;color:var(--text-3);">راجع البيانات مقابل الأوراق الأصلية ثم أدخلها تأكيداً</p>
+      </div>
+    </div>
+
+    <div id="dp-alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <!-- ── الجانب الأيسر: بيانات التطبيق + الوثائق ── -->
+      <div>
+
+        <!-- بيانات المواطن من التطبيق -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header" style="background:var(--blue-bg);border-bottom:2px solid var(--blue);">
+            📱 البيانات المُرسَلة من التطبيق
+            <span class="badge badge-info" style="margin-right:auto;">للمراجعة فقط</span>
+          </div>
+          <div class="card-body">
+            <table style="width:100%;font-size:13px;border-collapse:collapse;" id="dp-app-data">
+              <tr><td colspan="2" style="text-align:center;color:var(--text-4);padding:20px;">جارٍ التحميل...</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- الوثائق المرفوعة -->
+        <div class="card">
+          <div class="card-header">📎 الوثائق المرفوعة من المواطن</div>
+          <div class="card-body" id="dp-docs">
+            <div style="text-align:center;color:var(--text-4);">جارٍ التحميل...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── الجانب الأيمن: نموذج التأكيد ── -->
+      <div>
+        <div class="card">
+          <div class="card-header" style="background:var(--surface-3);">
+            ✅ تأكيد البيانات من الأوراق الأصلية
+            <span class="badge badge-warning" style="margin-right:auto;">أدخلها من الوثائق الرسمية</span>
+          </div>
+          <div class="card-body">
+
+            <div class="alert alert-info" style="font-size:12px;margin-bottom:14px;">
+              🗂️ أمامك الأوراق الأصلية للمواطن — أدخل البيانات تأكيداً للمطابقة
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">الاسم الكامل <span style="color:var(--danger)">*</span></label>
+              <input class="form-input" id="cf-name" placeholder="كما في البطاقة الشخصية">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">الرقم الوطني <span style="color:var(--danger)">*</span></label>
+              <input class="form-input" id="cf-nid" placeholder="12 رقم" maxlength="12" inputmode="numeric" dir="ltr">
+              <p class="form-hint">يبدأ بـ 1 (ذكر) أو 2 (أنثى)</p>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label class="form-label">رقم البطاقة الشخصية</label>
+                <input class="form-input" id="cf-idcard" dir="ltr">
+              </div>
+              <div class="form-group">
+                <label class="form-label">رقم جواز السفر</label>
+                <input class="form-input" id="cf-passport" dir="ltr">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">رخصة القيادة</label>
+              <input class="form-input" id="cf-license" dir="ltr">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label class="form-label">رقم الهاتف</label>
+                <input class="form-input" id="cf-phone" dir="ltr">
+              </div>
+              <div class="form-group">
+                <label class="form-label">العنوان</label>
+                <input class="form-input" id="cf-address">
+              </div>
+            </div>
+
+            <!-- قائمة التحقق من الوثائق الأصلية -->
+            <div style="background:var(--surface-3);border-radius:10px;padding:14px;margin-top:8px;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;">✅ تأكيد استلام الوثائق الأصلية:</div>
+              <label style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="chk-doc"> البطاقة الشخصية (أصل + صورة)</label>
+              <label style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="chk-doc"> شهادة الميلاد</label>
+              <label style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="chk-doc"> رخصة القيادة</label>
+              <label style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="chk-doc"> الطلب الكتابي الرسمي</label>
+              <label style="display:flex;gap:8px;align-items:center;padding:7px 0;cursor:pointer;font-size:13px;">
+                <input type="checkbox" class="chk-doc"> وثيقة ملكية المركبة</label>
+            </div>
+
+            <div class="form-group" style="margin-top:14px;">
+              <label class="form-label">ملاحظات</label>
+              <textarea class="form-input" id="cf-notes" rows="2" placeholder="أي ملاحظات للمدير..."></textarea>
+            </div>
+
+            <button class="btn btn-primary btn-block" style="padding:13px;font-size:14px;" onclick="submitToAdmin()">
+              📤 إرسال طلب رسمي للمدير
+            </button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+let activeRequest = null;
+
+// ── تحميل كل الطلبات ────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('search-q').value = '';
+  const res  = await fetch('/api/v1/citizen/requests', {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  renderList(data.data || []);
+}
+
+async function search() {
+  const q = document.getElementById('search-q').value.trim();
+  if (!q) { loadAll(); return; }
+  const res  = await fetch(`/api/v1/citizen/requests?q=${encodeURIComponent(q)}`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  const rows = data.data || [];
+
+  if (!rows.length) {
+    showAlert('لم يتم العثور على طلب بهذا الرقم أو البيانات', 'error');
+    renderList([]);
+    return;
+  }
+
+  renderList(rows);
+
+  // إذا كان البحث برقم مراجعة وأعطى نتيجة واحدة — افتح الطلب مباشرة
+  if (rows.length === 1) {
+    setTimeout(() => openDetail(rows[0]), 300);
+  }
+}
+
+function renderList(rows) {
+  if (!rows.length) {
+    document.getElementById('list').innerHTML = `
+      <div class="card"><div class="card-body" style="text-align:center;padding:50px;color:var(--text-4);">
+        <div style="font-size:32px;margin-bottom:10px;">📋</div>
+        <div>لا توجد طلبات مواطنين حالياً</div>
+      </div></div>`;
+    return;
+  }
+
+  // فصل الطلبات الجديدة عن المعالجة
+  const pending   = rows.filter(r => r.status === 'pending');
+  const processed = rows.filter(r => r.status !== 'pending');
+
+  let html = '';
+
+  if (pending.length) {
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text-3);margin-bottom:8px;letter-spacing:.5px;">
+      🆕 طلبات جديدة تنتظر المراجعة (${pending.length})
+    </div>`;
+    html += pending.map(r => requestCard(r, true)).join('');
+  }
+
+  if (processed.length) {
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text-3);margin:16px 0 8px;letter-spacing:.5px;">
+      ✅ طلبات تمت معالجتها (${processed.length})
+    </div>`;
+    html += processed.map(r => requestCard(r, false)).join('');
+  }
+
+  document.getElementById('list').innerHTML = html;
+}
+
+function requestCard(r, isNew) {
+  return `
+  <div class="card" style="margin-bottom:10px;border:${isNew?'2px solid var(--blue)':'1px solid var(--border)'};">
+    <div class="card-body" style="display:flex;align-items:center;gap:14px;">
+
+      <!-- رقم المراجعة -->
+      <div style="background:${isNew?'var(--blue)':'var(--surface-3)'};color:${isNew?'#fff':'var(--text)'};
+           border-radius:10px;padding:10px 14px;font-size:20px;font-weight:900;
+           font-family:monospace;letter-spacing:3px;min-width:100px;text-align:center;flex-shrink:0;">
+        ${r.review_number}
+      </div>
+
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;">${r.full_name}</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
+          الرقم الوطني: ${r.national_id} · الهاتف: ${r.phone||'—'}
+        </div>
+        <div style="font-size:11px;color:var(--text-4);margin-top:3px;">
+          📅 ${(r.created_at||'').split(' ')[0]} · ${r.email||'—'}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <span class="badge ${isNew?'badge-primary':'badge-success'}">
+          ${isNew?'🆕 جديد':'✅ تمت المعالجة'}
+        </span>
+        <button class="btn btn-${isNew?'primary':'secondary'} btn-sm"
+          onclick='openDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+          ${isNew?'📋 مراجعة واستكمال':'🔍 عرض التفاصيل'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── فتح تفاصيل الطلب ────────────────────────────────────────
+function openDetail(r) {
+  activeRequest = r;
+  document.getElementById('dp-title').textContent = `طلب #${r.review_number} — ${r.full_name}`;
+  document.getElementById('detail-panel').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  // عرض بيانات التطبيق
+  document.getElementById('dp-app-data').innerHTML = `
+    ${row2('الاسم الكامل',    r.full_name)}
+    ${row2('الرقم الوطني',   r.national_id, true)}
+    ${row2('الهاتف',         r.phone||'—')}
+    ${row2('البريد',         r.email||'—')}
+    ${row2('تاريخ الطلب',   (r.created_at||'').split(' ')[0])}
+  `;
+
+  // عرض الوثائق
+  document.getElementById('dp-docs').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${docItem('📷 الصورة الشخصية',      r.photo_path,     'image')}
+      ${docItem('📄 شهادة الميلاد',        r.birth_cert_path,'pdf')}
+      ${docItem('🪪 البطاقة أو الجواز',   r.id_doc_path,    'pdf')}
+    </div>`;
+
+  // ملء البيانات المسبقة في النموذج
+  document.getElementById('cf-name').value  = r.full_name || '';
+  document.getElementById('cf-nid').value   = r.national_id || '';
+  document.getElementById('cf-phone').value = r.phone || '';
+
+  // تمرير للأعلى
+  document.getElementById('detail-panel').scrollTop = 0;
+}
+
+function docItem(label, filePath, type) {
+  if (!filePath) return `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface-3);border-radius:10px;">
+      <span style="font-size:20px;">❌</span>
+      <div><div style="font-size:12px;font-weight:600;">${label}</div>
+      <div style="font-size:10px;color:var(--danger);">لم يتم الرفع</div></div>
+    </div>`;
+
+  const isImage = type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(filePath);
+  return `
+    <div style="background:var(--surface-3);border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">
+        <span style="font-size:12px;font-weight:600;">${label}</span>
+        <a href="${filePath}" target="_blank" class="btn btn-secondary btn-sm">🔗 فتح</a>
+      </div>
+      ${isImage ? `<img src="${filePath}" style="width:100%;max-height:180px;object-fit:cover;display:block;" onerror="this.style.display='none'">` :
+        `<div style="padding:10px 12px;font-size:11px;color:var(--text-3);">📄 ملف PDF — اضغط "فتح" للعرض</div>`}
+    </div>`;
+}
+
+function row2(label, val, mono=false) {
+  return `<tr>
+    <td style="padding:7px 0;color:var(--text-3);width:40%;border-bottom:1px solid var(--border);font-size:13px;">${label}</td>
+    <td style="padding:7px 0;font-weight:600;border-bottom:1px solid var(--border);font-size:13px;
+        ${mono?'font-family:monospace;':''}">${val||'—'}</td>
+  </tr>`;
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').style.display = 'none';
+  document.body.style.overflow = '';
+  activeRequest = null;
+}
+
+// ── إرسال للمدير ────────────────────────────────────────────
+async function submitToAdmin() {
+  const name    = document.getElementById('cf-name').value.trim();
+  const nid     = document.getElementById('cf-nid').value.trim();
+  const idcard  = document.getElementById('cf-idcard').value.trim();
+  const passport= document.getElementById('cf-passport').value.trim();
+  const license = document.getElementById('cf-license').value.trim();
+  const phone   = document.getElementById('cf-phone').value.trim();
+  const address = document.getElementById('cf-address').value.trim();
+  const notes   = document.getElementById('cf-notes').value.trim();
+
+  // التحقق
+  if (!name) { showDpAlert('الاسم الكامل مطلوب', 'error'); return; }
+  if (!nid || nid.length !== 12 || !/^\d+$/.test(nid)) {
+    showDpAlert('الرقم الوطني يجب أن يكون 12 رقماً', 'error'); return;
+  }
+  if (!['1','2'].includes(nid[0])) {
+    showDpAlert('الرقم الوطني يبدأ بـ 1 أو 2', 'error'); return;
+  }
+
+  const checks = document.querySelectorAll('.chk-doc');
+  const allChecked = Array.from(checks).every(c => c.checked);
+  if (!allChecked) {
+    showDpAlert('يرجى تأكيد استلام جميع الوثائق الأصلية الخمسة', 'error'); return;
+  }
+
+  showDpAlert('⏳ جارٍ الإرسال...', 'info');
+
+  try {
+    const res = await fetch('/api/v1/vehicles/step1/request', {
+      method: 'POST',
+      headers: {'Authorization':'Bearer '+T, 'Content-Type':'application/json'},
+      body: JSON.stringify({
+        citizen_national_id: nid,
+        citizen_name:        name,
+        owner_id_card:       idcard,
+        owner_passport:      passport,
+        driving_license:     license,
+        owner_phone:         phone,
+        address:             address,
+        notes:               notes,
+        citizen_request_id:  activeRequest?.id,
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      // تحديث حالة الطلب
+      await fetch(`/api/v1/citizen/requests/${activeRequest.id}/complete`, {
+        method:'POST', headers:{'Authorization':'Bearer '+T}
+      }).catch(()=>{});
+
+      showDpAlert('✅ تم إرسال الطلب الرسمي للمدير بنجاح — انتظر الموافقة', 'success');
+      setTimeout(() => {
+        closeDetail();
+        loadAll();
+      }, 2500);
+    } else {
+      showDpAlert(data.message || 'حدث خطأ في الإرسال', 'error');
+    }
+  } catch(e) {
+    showDpAlert('❌ خطأ في الاتصال: ' + e.message, 'error');
+  }
+}
+
+function showDpAlert(msg, type) {
+  const el = document.getElementById('dp-alert');
+  el.className = `alert alert-${type==='error'?'error':type==='info'?'info':'success'}`;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  if (type === 'error') setTimeout(() => el.style.display='none', 6000);
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('alert');
+  el.className = `alert alert-${type==='error'?'error':'success'}`;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display='none', 5000);
+}
+
+// فتح تلقائي إذا جاء من رسالة
+const urlParams = new URLSearchParams(location.search);
+const reviewFromUrl = urlParams.get('review');
+if (reviewFromUrl) {
+  document.getElementById('search-q').value = reviewFromUrl;
+  search();
+} else {
+  loadAll();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+
+  <div class="main-content">
+    <div class="page-wrapper">
+
+      <!-- Welcome Banner -->
+      <div class="welcome-banner" id="welcome-banner">
+        <div class="welcome-badge" id="role-badge">—</div>
+        <div class="welcome-title" id="welcome-title">مرحباً</div>
+        <div class="welcome-sub" id="welcome-sub">نظام إدارة مرور سبها الرقمي</div>
+      </div>
+
+      <!-- إشعار الرسائل غير المقروءة -->
+      <div id="msg-alert" class="alert alert-info" style="display:none;margin-bottom:16px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span id="msg-alert-text"></span>
+        <a href="/messages" style="margin-right:auto;font-weight:700;">عرض الرسائل</a>
+      </div>
+
+      <!-- إحصاءات -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card blue" style="grid-column:span 1;">
+          <div class="stat-icon"><svg width="22" height="22" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div><div class="stat-num">—</div><div class="stat-label">جارٍ التحميل</div></div>
+        </div>
+      </div>
+
+      <!-- آخر النشاطات -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          آخر النشاطات
+        </div>
+        <div id="activity-list" class="card-body" style="padding:0;"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+const name = localStorage.getItem('user_name');
+
+const ROLE_AR = {
+  ADMIN:'مدير النظام', REG_CHIEF:'رئيس التسجيل', INSP_CHIEF:'رئيس الفحص الفني',
+  VIOLATIONS_DEPT:'قسم المخالفات', PLATE_DEPT:'قسم اللوحات', OFFICER:'ضابط ميداني', CITIZEN:'مواطن'
+};
+
+const ACTION_NAMES = {
+  LOGIN:'تسجيل دخول', LOGOUT:'تسجيل خروج', CREATE_VEHICLE:'إنشاء مركبة',
+  INITIATE_TRANSFER:'بدء نقل ملكية', COMPLETE_TRANSFER:'إتمام نقل ملكية',
+  CREATE_VIOLATION:'تحرير مخالفة', PAY_VIOLATION:'تسديد مخالفة',
+  INSPECTION_DONE:'إتمام فحص فني', ADD_LIEN:'تسجيل حق امتياز',
+  RELEASE_LIEN:'شطب حق امتياز', PLATE_ISSUED:'إصدار لوحة',
+  FINAL_APPROVED:'موافقة نهائية', CREATE_CITIZEN:'تسجيل مواطن',
+  CREATE_STAFF:'إنشاء موظف', SUBMIT_REG_REQUEST:'رفع طلب تسجيل',
+};
+
+// بيانات الصفحة حسب الدور
+document.getElementById('welcome-title').textContent = `مرحباً، ${(name||'').split(' ')[0]}`;
+document.getElementById('role-badge').textContent    = ROLE_AR[role] || role;
+document.getElementById('welcome-sub').textContent   = new Date().toLocaleDateString('ar-LY', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// إجراءات سريعة حسب الدور
+const QUICK = {
+  ADMIN: [
+    { href:'/admin/staff',    icon:'users',    label:'إدارة الموظفين',         color:'blue' },
+    { href:'/admin/citizens', icon:'user',     label:'إدارة المواطنين',         color:'green' },
+    { href:'/vehicles',       icon:'car',      label:'قائمة المركبات',          color:'blue' },
+    { href:'/admin/audit',    icon:'log',      label:'سجل التدقيق',             color:'gray' },
+  ],
+  REG_CHIEF: [
+    { href:'/vehicles',       icon:'car',      label:'قائمة المركبات',          color:'blue' },
+    { href:'/messages',       icon:'msg',      label:'الرسائل الداخلية',        color:'gold' },
+    { href:'/transfers',      icon:'swap',     label:'نقل الملكية',             color:'blue' },
+    { href:'/officer/scan',   icon:'qr',       label:'مسح QR',                 color:'green' },
+  ],
+  INSP_CHIEF: [
+    { href:'/officer/scan',   icon:'qr',       label:'مسح QR',                 color:'blue' },
+    { href:'/messages',       icon:'msg',      label:'الرسائل الداخلية',        color:'gold' },
+    { href:'/inspections',    icon:'tool',     label:'سجل الفحوصات',           color:'green' },
+  ],
+  VIOLATIONS_DEPT: [
+    { href:'/violations',     icon:'warning',  label:'قائمة المخالفات',         color:'red' },
+    { href:'/violations?status=unpaid', icon:'warning', label:'المخالفات غير المدفوعة', color:'red' },
+    { href:'/officer/scan',   icon:'qr',       label:'مسح QR',                 color:'blue' },
+  ],
+  PLATE_DEPT: [
+    { href:'/transfers',      icon:'swap',     label:'طلبات نقل الملكية',      color:'blue' },
+    { href:'/officer/scan',   icon:'qr',       label:'مسح QR',                 color:'green' },
+    { href:'/messages',       icon:'msg',      label:'الرسائل',                 color:'gold' },
+  ],
+  OFFICER: [
+    { href:'/officer/scan',   icon:'qr',       label:'مسح QR — تحرير مخالفة', color:'blue' },
+    { href:'/violations',     icon:'warning',  label:'مخالفاتي',               color:'red' },
+  ],
+};
+
+const ICONS = {
+  users:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+  user:    '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  car:     '<path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+  warning: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
+  msg:     '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  log:     '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  qr:      '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z"/>',
+  swap:    '<path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>',
+  tool:    '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  gray:    '<rect x="3" y="3" width="18" height="18" rx="2"/>',
+};
+
+const COLOR_MAP = { blue:'var(--blue)', green:'var(--success)', red:'var(--danger)', gold:'var(--gold)', gray:'var(--text-4)' };
+const BG_MAP    = { blue:'#dbeafe', green:'var(--success-bg)', red:'var(--danger-bg)', gold:'#fef3c7', gray:'var(--surface-3)' };
+
+// الإجراءات السريعة محذوفة بناءً على طلب الإدارة
+
+// تحميل الإحصاءات
+async function loadStats() {
+  try {
+    const res  = await fetch('/api/v1/stats/dashboard', { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (!data.success) return;
+    const s = data.data;
+
+    // إشعار الرسائل
+    if (s.unread_messages > 0) {
+      document.getElementById('msg-alert').style.display = 'flex';
+      document.getElementById('msg-alert-text').textContent = `لديك ${s.unread_messages} رسالة غير مقروءة`;
+    }
+
+    // إحصاءات حسب الدور
+    let cardsHtml = '';
+
+    if (s.vehicles_total !== undefined) cardsHtml += card('blue', 'car', s.vehicles_total, 'إجمالي المركبات');
+    if (s.vehicles_active !== undefined) cardsHtml += card('green', 'check', s.vehicles_active, 'مركبات نشطة');
+    if (s.vehicles_pending !== undefined) cardsHtml += card('gold', 'clock', s.vehicles_pending, 'تنتظر الموافقة');
+    if (s.citizens_total !== undefined) cardsHtml += card('purple', 'users', s.citizens_total, 'المواطنون');
+    if (s.violations_unpaid !== undefined) cardsHtml += card('red', 'warning', s.violations_unpaid, 'مخالفات غير مدفوعة');
+    if (s.violations_paid !== undefined) cardsHtml += card('green', 'check', s.violations_paid, 'مخالفات مدفوعة');
+    if (s.fines_collected !== undefined) cardsHtml += card('green', 'money', Number(s.fines_collected).toFixed(0), 'إجمالي الغرامات المحصّلة (د.ل)');
+    if (s.transfers_pending !== undefined) cardsHtml += card('gold', 'swap', s.transfers_pending, 'نقل ملكية نشط');
+    if (s.transfers_overdue !== undefined && s.transfers_overdue > 0) cardsHtml += card('red', 'warning', s.transfers_overdue, 'تجاوزت المهلة');
+    if (s.inspections_today !== undefined) cardsHtml += card('blue', 'tool', s.inspections_today, 'فحوصات اليوم');
+    if (s.my_violations !== undefined) cardsHtml += card('blue', 'warning', s.my_violations, 'مخالفاتي الكلية');
+    if (s.my_violations_today !== undefined) cardsHtml += card('gold', 'warning', s.my_violations_today, 'مخالفات اليوم');
+
+    if (cardsHtml) document.getElementById('stats-grid').innerHTML = cardsHtml;
+
+    // آخر النشاطات
+    const acts = s.recent_activity || [];
+    if (acts.length) {
+      document.getElementById('activity-list').innerHTML = `<div style="padding:0 4px;">` + acts.map(a => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text-3);">${(a.user_name||'?')[0]}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text-2);">${ACTION_NAMES[a.action]||a.action}</div>
+            <div style="font-size:11px;color:var(--text-4);margin-top:1px;">${a.user_name||'—'} • ${a.created_at?.replace('T',' ').split('.')[0]||''}</div>
+          </div>
+        </div>
+      `).join('') + '</div>';
+    }
+  } catch(e) { console.error(e); }
+}
+
+function card(color, icon, val, label) {
+  const ic = {
+    car:'<path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+    check:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    warning:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
+    users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    money:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    swap:'<path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>',
+    tool:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  }[icon] || '';
+  return `<div class="stat-card ${color}"><div class="stat-icon"><svg width="22" height="22" style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div><div><div class="stat-num">${val}</div><div class="stat-label">${label}</div></div></div>`;
+}
+
+loadStats();
+</script>
+</body>
+</html>

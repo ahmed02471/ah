@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي — نظام مرور سبها</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="with-sidebar">
+    
+    
+    
+    
+
+    <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+        <div class="page-wrapper">
+
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">الملف الشخصي</h1>
+                    <p class="page-subtitle">عرض وتحديث بياناتك الشخصية</p>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+
+                <!-- Profile Info Card -->
+                <div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="profile-avatar">
+                                <div class="avatar-circle">
+                                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                </div>
+                                <div class="avatar-name" id="profile-name">—</div>
+                                <div class="avatar-role" id="profile-role-display">—</div>
+                            </div>
+                            <div class="divider"></div>
+                            <table class="info-table">
+                                <tr>
+                                    <th>الرقم الوطني</th>
+                                    <td id="profile-national-id">—</td>
+                                </tr>
+                                <tr>
+                                    <th>الدور الوظيفي</th>
+                                    <td id="profile-role">—</td>
+                                </tr>
+                                <tr>
+                                    <th>رقم الهاتف</th>
+                                    <td id="profile-phone">—</td>
+                                </tr>
+                                <tr>
+                                    <th>آخر تسجيل دخول</th>
+                                    <td id="profile-last-login">—</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Change Password Card -->
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            تغيير كلمة المرور
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-success" id="pw-success" style="display:none;">
+                                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+                                تم تغيير كلمة المرور بنجاح
+                            </div>
+                            <div class="alert alert-error" id="pw-error" style="display:none;">
+                                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span id="pw-error-msg">حدث خطأ</span>
+                            </div>
+                            <form id="changePasswordForm">
+                                <div class="form-group">
+                                    <label class="form-label">كلمة المرور الحالية</label>
+                                    <input class="form-input" type="password" name="current_password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">كلمة المرور الجديدة</label>
+                                    <input class="form-input" type="password" name="new_password" id="new_password" minlength="8" required>
+                                    <span class="form-hint">8 أحرف على الأقل</span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                                    <input class="form-input" type="password" name="confirm_password" id="confirm_password" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary" id="pw-btn">
+                                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span id="pw-btn-text">حفظ كلمة المرور</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roleNames = { ADMIN:'مدير النظام', REG_CHIEF:'رئيس قسم التسجيل', INSP_CHIEF:'رئيس قسم الفحص الفني', PLATE_DEPT:'قسم اللوحات المعدنية', OFFICER:'ضابط المرور الميداني', CITIZEN:'مواطن' };
+
+        async function loadProfile() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/v1/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) return;
+                const u = data.data;
+                document.getElementById('profile-name').textContent = u.full_name;
+                document.getElementById('profile-role-display').textContent = roleNames[u.role] || u.role;
+                document.getElementById('profile-national-id').textContent = u.national_id;
+                document.getElementById('profile-role').textContent = roleNames[u.role] || u.role;
+                document.getElementById('profile-phone').textContent = u.phone || 'غير محدد';
+                document.getElementById('profile-last-login').textContent = u.last_login ? new Date(u.last_login).toLocaleString('ar-LY') : 'أول مرة';
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const successDiv = document.getElementById('pw-success');
+            const errorDiv = document.getElementById('pw-error');
+            const errorMsg = document.getElementById('pw-error-msg');
+            const btn = document.getElementById('pw-btn');
+            const btnText = document.getElementById('pw-btn-text');
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            const newPw = document.getElementById('new_password').value;
+            const confirmPw = document.getElementById('confirm_password').value;
+            if (newPw !== confirmPw) {
+                errorMsg.textContent = 'كلمتا المرور غير متطابقتين';
+                errorDiv.style.display = 'flex';
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.textContent = 'جارٍ الحفظ...';
+            const formData = new FormData(this);
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/v1/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: formData.get('current_password'), new_password: newPw })
+                });
+                const data = await res.json();
+                if (data.success) { successDiv.style.display = 'flex'; this.reset(); }
+                else { errorMsg.textContent = data.message || 'فشل تغيير كلمة المرور'; errorDiv.style.display = 'flex'; }
+            } catch { errorMsg.textContent = 'خطأ في الاتصال بالخادم'; errorDiv.style.display = 'flex'; }
+            finally { btn.disabled = false; btnText.textContent = 'حفظ كلمة المرور'; }
+        });
+
+        loadProfile();
+    </script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إصدار اللوحات — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>إصدار اللوحات</span></div>
+      <h1 class="page-title">أوامر إصدار اللوحات</h1>
+      <p class="page-subtitle">قسم اللوحات — استلم 30 دينار واطبع اللوحة وملصق QR</p>
+    </div>
+    <button class="btn btn-secondary" onclick="load()">↻ تحديث</button>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+  <div id="list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;"></div>
+
+</div></div>
+
+<script>
+const T = localStorage.getItem('auth_token');
+
+async function load() {
+  const res  = await fetch('/api/v1/vehicles/pending/list', {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) return;
+
+  const items = data.data.filter(p => p.status === 'step6_approved_for_plate');
+
+  if (!items.length) {
+    document.getElementById('list').innerHTML = `
+      <div class="card" style="grid-column:1/-1;">
+        <div class="card-body" style="text-align:center;padding:50px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="opacity:.3;margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <p style="color:var(--text-4);">لا توجد لوحات للإصدار حالياً</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('list').innerHTML = items.map(p => {
+    let vd={}, bd={};
+    try { vd = JSON.parse(p.vehicle_data||'{}'); } catch(_){}
+    try { bd = JSON.parse(p.bel_data||'{}'); } catch(_){}
+    const plate = p.plate_number || bd.plate_number || '—';
+    const qrToken = p.qr_token || bd.qr_token;
+    const qrSrc = qrToken
+      ? `/api/v1/qr/${qrToken}`
+      : null;
+
+    return `
+    <div class="card">
+      <div class="card-header" style="background:linear-gradient(135deg,var(--navy),#1e3a6e);color:#fff;border-radius:10px 10px 0 0;">
+        🏷️ أمر طباعة لوحة #${p.id}
+      </div>
+      <div class="card-body">
+
+        <!-- اللوحة -->
+        <div style="background:linear-gradient(135deg,#0a1628,#1e3a6e);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;">رقم اللوحة</div>
+          <div style="font-size:26px;font-weight:900;font-family:monospace;color:#fff;letter-spacing:3px;">${plate}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;">Libya — LBY</div>
+        </div>
+
+        <!-- QR -->
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">
+          <div style="text-align:center;flex-shrink:0;">
+            ${qrSrc
+              ? `<img src="${qrSrc}" width="100" height="100" style="border:1px solid var(--border);border-radius:6px;" onerror="this.style.display='none'">`
+              : `<div style="width:100px;height:100px;background:var(--surface-3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-4);">QR</div>`}
+            <div style="font-size:9px;color:var(--text-4);margin-top:4px;">ملصق QR للمركبة</div>
+          </div>
+          <div style="flex:1;font-size:12px;">
+            <div><strong>المالك:</strong> ${p.owner_name}</div>
+            <div style="margin-top:4px;"><strong>الرقم الوطني:</strong> ${p.owner_national_id}</div>
+            <div style="margin-top:4px;"><strong>المركبة:</strong> ${vd.make||'—'} ${vd.model||''} ${vd.year||''}</div>
+            <div style="margin-top:4px;"><strong>النوع:</strong> ${vd.vehicle_type||'—'}</div>
+            <div style="margin-top:4px;"><strong>اللون:</strong> ${vd.color||'—'}</div>
+            <div style="margin-top:4px;"><strong>الهيكل:</strong> <span style="font-family:monospace;font-size:10px;">${vd.chassis_number||'—'}</span></div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning" style="font-size:12px;margin-bottom:12px;">
+          💰 استلم 30 دينار من المواطن قبل الإصدار
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-success" style="flex:1;" onclick="issuePlate(${p.id})">
+            ✅ تأكيد الإصدار
+          </button>
+          ${qrToken ? `
+          <button class="btn btn-secondary btn-sm" onclick="printQR('${qrToken}')" title="طباعة ملصق QR">
+            🖨️ QR
+          </button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function issuePlate(id) {
+  if (!confirm('تأكيد استلام 30 دينار وإصدار اللوحة؟')) return;
+  const res  = await fetch('/api/v1/vehicles/step7/issue-plate', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({pending_id:id, fee_paid:30})
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert(`✅ تم إصدار اللوحة ${data.data.plate_number} بنجاح`, 'success');
+    setTimeout(load, 1500);
+  } else showAlert(data.message, 'error');
+}
+
+function printQR(token) {
+  window.open(`/api/v1/qr-print/${token}?token=${encodeURIComponent(T)}`, '_blank');
+}
+
+function showAlert(msg,type){
+  const el=document.getElementById('alert');
+  el.className=`alert alert-${type==='error'?'error':'success'}`;
+  el.textContent=msg;
+  el.style.display='flex';
+  if(type!=='success')setTimeout(()=>el.style.display='none',5000);
+}
+
+load();
+setInterval(load,30000);
+</script>
+</body>
+</html>

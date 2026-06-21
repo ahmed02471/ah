@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>البل والتأمين وتوليد اللوحة — الخطوة 5</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/pending">الطلبات المعلّقة</a><span class="breadcrumb-sep">›</span><span>الخطوة 5</span></div>
+      <h1 class="page-title">الخطوة 5 — البل والتأمين وتوليد اللوحة</h1>
+      <p class="page-subtitle">قسم التسجيل · أدخل البل والتأمين ثم يُولَّد رقم اللوحة و QR تلقائياً</p>
+    </div>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;">
+
+    <!-- ملخص البيانات الواردة -->
+    <div class="card">
+      <div class="card-header">📋 بيانات المركبة والفحص — من قسم الفحص</div>
+      <div class="card-body">
+        <div id="summary" style="color:var(--text-3);font-size:13px;">جارٍ التحميل...</div>
+      </div>
+    </div>
+
+    <!-- البل + التأمين + توليد اللوحة -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- البل -->
+      <div class="card">
+        <div class="card-header">📄 رخصة التجول (البل)</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">رقم البل</label>
+            <input class="form-input" id="bel_number" placeholder="رقم رخصة التجول" dir="ltr">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">الرسم المدفوع (د.ل)</label>
+              <input class="form-input" id="bel_fee" type="number" step="0.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">صالح حتى <span style="color:var(--danger)">*</span></label>
+              <input class="form-input" id="bel_valid_until" type="date">
+            </div>
+          </div>
+          <!-- ضريبة اللوحة -->
+          <div style="background:var(--warning-bg);border:1px solid var(--gold);border-radius:8px;padding:12px;margin-top:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--warning);">💰 ضريبة إصدار اللوحة</div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:2px;">رسم إداري ثابت لإصدار اللوحة المعدنية</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:var(--warning);">60 د.ل</div>
+            </div>
+            <div class="form-group" style="margin-top:10px;margin-bottom:0;">
+              <label class="form-label">تأكيد سداد الضريبة <span style="color:var(--danger)">*</span></label>
+              <select class="form-select" id="plate_tax_paid">
+                <option value="">— اختر —</option>
+                <option value="yes">✅ تم السداد</option>
+                <option value="no">❌ لم يتم السداد بعد</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- التأمين -->
+      <div class="card" style="border:1px solid var(--border);">
+        <div class="card-header">🛡️ بيانات التأمين</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">شركة التأمين <span style="color:var(--danger)">*</span></label>
+            <input class="form-input" id="ins_company" placeholder="اسم شركة التأمين">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الوثيقة <span style="color:var(--danger)">*</span></label>
+            <input class="form-input" id="ins_policy" dir="ltr" placeholder="رقم وثيقة التأمين">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">من تاريخ</label>
+              <input class="form-input" id="ins_from" type="date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">صالح حتى <span style="color:var(--danger)">*</span></label>
+              <input class="form-input" id="ins_until" type="date">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- توليد اللوحة -->
+      <div class="card" style="border:2px solid var(--blue);">
+        <div class="card-body">
+          <!-- بنر اللوحة المحجوزة (يظهر فقط إن وجدت) -->
+          <div id="reservation-banner" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:6px;">&#x1F3F7; المالك لديه لوحة محجوزة</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div>
+                <div id="reserved-plate-display" style="font-size:18px;font-weight:900;font-family:monospace;color:#9a3412;"></div>
+                <div id="reserved-plate-expiry" style="font-size:11px;color:#c2410c;"></div>
+              </div>
+              <button class="btn btn-sm" style="background:#c2410c;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;"
+                onclick="useReservedPlate()">استخدام هذه اللوحة</button>
+            </div>
+          </div>
+          <div id="reserved-plate-used-badge" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:#15803d;margin-bottom:12px;">
+            &#10003; سيتم استخدام اللوحة المحجوزة
+          </div>
+          <div class="alert alert-info" style="margin-bottom:12px;font-size:12px;">
+            سيُولَّد رقم اللوحة و QR تلقائياً وترسل للمدير للاعتماد النهائي
+          </div>
+          <button class="btn btn-success btn-block" style="padding:13px;" onclick="generatePlate()">
+            توليد اللوحة و QR وإرسال للمدير
+          </button>
+          <div id="plate-result" style="display:none;margin-top:14px;background:var(--blue-bg);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-3);">اللوحة المولَّدة</div>
+            <div id="plate-num" style="font-size:26px;font-weight:900;font-family:monospace;color:var(--blue);letter-spacing:2px;margin:6px 0;"></div>
+            <div style="font-size:11px;color:var(--text-4);">✅ أُرسل للمدير للاعتماد النهائي</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const T  = localStorage.getItem('auth_token');
+const id = location.pathname.split('/').pop();
+
+async function load() {
+  const res  = await fetch(`/api/v1/vehicles/pending/${id}`,{headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) { showAlert('الطلب غير موجود','error'); return; }
+  const p  = data.data;
+  const vd = p.vehicle_data_parsed  || {};
+  const id2= p.inspection_data_parsed || {};
+
+  document.getElementById('summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><span style="color:var(--text-4);font-size:10px;">المالك</span><br><strong>${p.owner_name}</strong></div>
+      <div><span style="color:var(--text-4);font-size:10px;">الرقم الوطني</span><br><span style="font-family:monospace;">${p.owner_national_id}</span></div>
+      <div><span style="color:var(--text-4);font-size:10px;">المركبة</span><br><strong>${vd.make||'—'} ${vd.model||''} ${vd.year||''}</strong></div>
+      <div><span style="color:var(--text-4);font-size:10px;">النوع</span><br>${vd.vehicle_type||'—'}</div>
+      <div><span style="color:var(--text-4);font-size:10px;">الهيكل</span><br><span style="font-family:monospace;font-size:11px;">${vd.chassis_number||'—'}</span></div>
+      <div><span style="color:var(--text-4);font-size:10px;">نتيجة الفحص</span><br>
+        <span class="badge ${id2.inspection_result==='صالحة'?'badge-success':'badge-danger'}">${id2.inspection_result||'—'}</span>
+      </div>
+    </div>`;
+
+  // تعيين التواريخ تلقائياً
+  const d = new Date(); d.setFullYear(d.getFullYear()+1);
+  const expiry = d.toISOString().split('T')[0];
+  document.getElementById('bel_valid_until').value = expiry;
+  document.getElementById('ins_until').value = expiry;
+  document.getElementById('ins_from').value  = new Date().toISOString().split('T')[0];
+
+  // فحص اللوحات المحجوزة للمالك
+  if (p.owner_national_id) checkPlateReservation(p.owner_national_id);
+}
+
+// ── فحص اللوحات المحجوزة ───────────────────────────────────
+let _reservedPlate = null;
+async function checkPlateReservation(nid) {
+  try {
+    const res  = await fetch(`/api/v1/citizen/plate-reservations-admin?national_id=${nid}`, {headers:{Authorization:'Bearer '+T}});
+    const data = await res.json();
+    if (data.success && data.data && data.data.length) {
+      const r = data.data[0];
+      _reservedPlate = r.old_plate_number;
+      document.getElementById('reserved-plate-display').textContent = r.old_plate_number;
+      const days = Math.ceil((new Date(r.expires_at)-new Date())/86400000);
+      document.getElementById('reserved-plate-expiry').textContent = `تنتهي خلال ${days} يوم`;
+      document.getElementById('reservation-banner').style.display = 'block';
+    }
+  } catch(_) {}
+}
+
+function useReservedPlate() {
+  document.getElementById('reservation-banner').style.display = 'none';
+  document.getElementById('reserved-plate-used-badge').style.display = 'block';
+}
+
+function getReservedPlate() {
+  const badge = document.getElementById('reserved-plate-used-badge');
+  return badge.style.display !== 'none' ? _reservedPlate : null;
+}
+
+async function generatePlate() {
+  const belUntil   = document.getElementById('bel_valid_until').value;
+  const insCompany = document.getElementById('ins_company').value.trim();
+  const insPolicy  = document.getElementById('ins_policy').value.trim();
+  const insUntil   = document.getElementById('ins_until').value;
+
+  if (!belUntil)   { showAlert('تاريخ انتهاء البل مطلوب','error'); return; }
+  if (!insCompany) { showAlert('شركة التأمين مطلوبة','error'); return; }
+  if (!insPolicy)  { showAlert('رقم وثيقة التأمين مطلوب','error'); return; }
+  if (!insUntil)   { showAlert('تاريخ انتهاء التأمين مطلوب','error'); return; }
+  const taxPaid = document.getElementById('plate_tax_paid').value;
+  if (!taxPaid)    { showAlert('يرجى تأكيد حالة سداد ضريبة اللوحة (60 دينار)','error'); return; }
+  if (taxPaid === 'no') { showAlert('لا يمكن إصدار اللوحة قبل سداد ضريبة 60 دينار','error'); return; }
+
+  const res = await fetch('/api/v1/vehicles/step5/generate-plate',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({
+      pending_id:      parseInt(id),
+      bel_number:      document.getElementById('bel_number').value.trim(),
+      bel_fee:         parseFloat(document.getElementById('bel_fee').value)||null,
+      bel_valid_until: belUntil,
+      reserved_plate:  getReservedPlate(),
+      insurance: {
+        company_name:  insCompany,
+        policy_number: insPolicy,
+        valid_from:    document.getElementById('ins_from').value || null,
+        valid_until:   insUntil,
+      }
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('plate-num').textContent = data.data.plate_number;
+    document.getElementById('plate-result').style.display = 'block';
+    showAlert(`✅ اللوحة: ${data.data.plate_number} — أُرسلت للمدير`,'success');
+    setTimeout(()=>location.href='/pending', 3000);
+  } else showAlert(data.message||'خطأ','error');
+}
+
+function showAlert(m,t){const el=document.getElementById('alert');el.className=`alert alert-${t==='error'?'error':'success'}`;el.textContent=m;el.style.display='flex';if(t!=='success')setTimeout(()=>el.style.display='none',5000);}
+load();
+</script>
+</body>
+</html>

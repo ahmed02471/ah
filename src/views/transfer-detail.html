@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل نقل الملكية — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+    <div class="page-wrapper">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb"><a href="/transfers">نقل الملكية</a><span class="breadcrumb-sep">›</span><span>التفاصيل</span></div>
+          <h1 class="page-title">تفاصيل نقل الملكية</h1>
+        </div>
+        <a href="/transfers" class="btn btn-secondary">رجوع</a>
+      </div>
+      <div id="alert" class="alert" style="display:none;margin-bottom:14px;max-width:760px;"></div>
+      <div id="content" style="max-width:760px;">
+        <div class="card"><div class="card-body"><p class="text-muted text-center">جارٍ التحميل...</p></div></div>
+      </div>
+    </div>
+  </div>
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+const tid  = location.pathname.split('/').pop();
+
+const STATUS = {
+  step1_suspended:           { t:'🔒 مُعلَّقة — انتظار إرسال للمدير',   c:'badge-warning' },
+  step2_pending_admin:       { t:'⏳ ينتظر موافقة المدير',              c:'badge-warning' },
+  step3_approved:            { t:'✅ موافقة — أدخل بيانات المشتري',     c:'badge-success' },
+  step4_pending_final:       { t:'⏳ ينتظر اعتماد نهائي',               c:'badge-warning' },
+  step5_approved_for_plate:  { t:'✅ معتمد — بانتظار إصدار اللوحة',     c:'badge-success' },
+  completed:                 { t:'مكتمل',                              c:'badge-success' },
+  rejected:                  { t:'❌ مرفوض',                            c:'badge-danger'  },
+  expired:                   { t:'⚠️ انتهت المهلة',                     c:'badge-danger'  },
+};
+
+let _writers = [];
+let _currentTransfer = null;
+
+function showAlert(m,t){const el=document.getElementById('alert');el.className=`alert alert-${t==='error'?'error':'success'}`;el.textContent=m;el.style.display='flex';if(t!=='success')setTimeout(()=>el.style.display='none',6000);}
+
+async function load() {
+  const res  = await fetch(`/api/v1/transfers/${tid}`, { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success) {
+    document.getElementById('content').innerHTML = `<div class="alert alert-error">${data.message}</div>`;
+    return;
+  }
+  const t = _currentTransfer = data.data;
+  const st = STATUS[t.status] || { t:t.status, c:'badge-gray' };
+
+  // ── شريط المهلة (المرحلة 1 فقط) ──────────────────────────
+  let deadlineBar = '';
+  if (t.status === 'step1_suspended' && t.deadline_at) {
+    const remain = Math.ceil((new Date(t.deadline_at) - new Date()) / 86400000);
+    const overdue = remain < 0;
+    const pct  = Math.max(0, Math.min(100, ((7 - Math.max(remain,0)) / 7) * 100));
+    const color = overdue ? 'var(--danger)' : (remain <= 2 ? 'var(--warning)' : 'var(--success)');
+    deadlineBar = `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;">
+          <span class="text-muted">المهلة: 7 أيام</span>
+          <span style="color:${color};font-weight:700;">${overdue ? '⚠️ انتهت المهلة' : `${remain} يوم متبقٍ`}</span>
+        </div>
+        <div style="height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${color};transition:width .3s;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-4);margin-top:3px;">الموعد النهائي: ${(t.deadline_at||'').split(' ')[0]||'—'}</div>
+      </div>`;
+  }
+
+  // ── بطاقة بيانات أساسية ───────────────────────────────────
+  const baseCard = `
+    <div class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+        نقل ملكية — ${t.old_plate_number||'—'}
+        <div class="card-header-actions">
+          <span class="badge ${st.c}">${st.t}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        ${deadlineBar}
+        <div class="form-grid-2">
+          <div><div class="td-label">رقم اللوحة (القديمة)</div><div class="font-mono fw-7">${t.old_plate_number||'—'}</div></div>
+          <div><div class="td-label">المركبة</div><div>${t.make||''} ${t.model||''} ${t.year||''} ${t.color||''}</div></div>
+          <div><div class="td-label">البائع (المالك الحالي)</div><div class="fw-7">${t.from_owner_name||'—'}</div></div>
+          <div><div class="td-label">رقم هوية البائع</div><div class="font-mono">${t.from_owner_national_id||'—'}</div></div>
+          ${t.contract_number ? `<div><div class="td-label">رقم العقد</div><div>${t.contract_number}</div></div>` : ''}
+          ${t.notes ? `<div><div class="td-label">ملاحظات</div><div>${t.notes}</div></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  // ── بطاقة بيانات المشتري (تظهر من المرحلة 3 فصاعداً) ─────
+  let buyerCard = '';
+  if (t.to_owner_name) {
+    buyerCard = `
+      <div class="card" style="margin-top:14px;">
+        <div class="card-header">👤 بيانات المشتري (المالك الجديد)</div>
+        <div class="card-body">
+          <div class="form-grid-2">
+            <div><div class="td-label">الاسم</div><div class="fw-7">${t.to_owner_name}</div></div>
+            <div><div class="td-label">الرقم الوطني</div><div class="font-mono">${t.to_owner_national_id||'—'}</div></div>
+            <div><div class="td-label">رقم البطاقة</div><div>${t.to_owner_id_card||'—'}</div></div>
+            <div><div class="td-label">رقم الجواز</div><div>${t.to_owner_passport||'—'}</div></div>
+            <div><div class="td-label">رخصة القيادة</div><div>${t.to_driving_license||'—'}</div></div>
+            <div><div class="td-label">الهاتف</div><div class="font-mono">${t.to_owner_phone||'—'}</div></div>
+            <div><div class="td-label">العنوان</div><div>${t.to_address||'—'}</div></div>
+            ${t.new_plate_number ? `<div><div class="td-label">اللوحة الجديدة</div><div class="font-mono fw-7" style="color:var(--success);">${t.new_plate_number}</div></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── رسالة الرفض ──────────────────────────────────────────
+  let rejectCard = '';
+  if (t.status === 'rejected' && t.rejection_reason) {
+    rejectCard = `<div class="alert alert-error" style="margin-top:14px;">❌ تم رفض الطلب — السبب: ${t.rejection_reason}</div>`;
+  }
+  if (t.status === 'completed' && t.plate_issued_at) {
+    rejectCard = `<div class="alert alert-success" style="margin-top:14px;">✅ اكتمل نقل الملكية بتاريخ ${(t.plate_issued_at||'').split(' ')[0]} — اللوحة الجديدة: <strong class="font-mono">${t.new_plate_number||'—'}</strong></div>`;
+  }
+
+  // ── قسم الإجراء حسب الدور والحالة ────────────────────────
+  const actionSection = renderActionSection(t);
+
+  document.getElementById('content').innerHTML = baseCard + buyerCard + rejectCard + actionSection;
+
+  // بعد الرسم، فعّل أي منطق خاص بالنموذج المعروض
+  wireActionSection(t);
+}
+
+// ════════════════════════════════════════════════════════════
+// قسم الإجراءات — يُبنى حسب (الدور × الحالة)
+// ════════════════════════════════════════════════════════════
+function renderActionSection(t) {
+  // المرحلة 1 → REG_CHIEF/ADMIN يرسل للمدير
+  if (t.status === 'step1_suspended' && (role === 'REG_CHIEF' || role === 'ADMIN')) {
+    return `
+      <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+        <div class="card-header">📨 إرسال طلب النقل إلى المدير</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">محرر العقد</label>
+            <select class="form-select" id="act_contract_writer"><option value="">— اختر محرر العقد —</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم العقد</label>
+            <input class="form-input" id="act_contract_number" dir="ltr" placeholder="رقم العقد (إن وُجد)">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">ملاحظات</label>
+            <textarea class="form-input" id="act_notes" rows="2" placeholder="ملاحظات إضافية (اختياري)"></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="actSubmitToAdmin()">إرسال إلى المدير للموافقة</button>
+        </div>
+      </div>`;
+  }
+
+  // المرحلة 2 → ADMIN يقرر
+  if (t.status === 'step2_pending_admin' && role === 'ADMIN') {
+    return `
+      <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+        <div class="card-header">⚖️ قرار المدير</div>
+        <div class="card-body">
+          <p class="text-muted" style="font-size:13px;margin-bottom:12px;">راجع بيانات الطلب أعلاه، ثم اختر الموافقة أو الرفض.</p>
+          <div class="form-group">
+            <label class="form-label">سبب الرفض (في حال الرفض)</label>
+            <textarea class="form-input" id="act_reject_reason" rows="2" placeholder="سبب الرفض — مطلوب عند الرفض فقط"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-success" style="flex:1;" onclick="actAdminDecision('approved')">✅ موافقة</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="actAdminDecision('rejected')">❌ رفض</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // المرحلة 3 → REG_CHIEF/ADMIN يُدخل بيانات المشتري
+  if (t.status === 'step3_approved' && (role === 'REG_CHIEF' || role === 'ADMIN')) {
+    return `
+      <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+        <div class="card-header">👤 إدخال بيانات المشتري (المالك الجديد)</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">الرقم الوطني للمشتري <span style="color:var(--danger)">*</span></label>
+            <input class="form-input" id="b_nid" dir="ltr" maxlength="20" placeholder="الرقم الوطني" oninput="lookupBuyerByNid(this.value)">
+            <div id="b-nid-lookup-result" style="font-size:11px;margin-top:4px;min-height:16px;"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">اسم المشتري <span style="color:var(--danger)">*</span></label>
+            <input class="form-input" id="b_name" placeholder="الاسم الكامل">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">رقم البطاقة الشخصية</label>
+              <input class="form-input" id="b_id_card" dir="ltr">
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم الجواز</label>
+              <input class="form-input" id="b_passport" dir="ltr">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">رخصة القيادة</label>
+              <input class="form-input" id="b_license" dir="ltr">
+            </div>
+            <div class="form-group">
+              <label class="form-label">الهاتف</label>
+              <input class="form-input" id="b_phone" dir="ltr">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">العنوان</label>
+            <textarea class="form-input" id="b_address" rows="2" placeholder="عنوان السكن"></textarea>
+          </div>
+          <div class="alert alert-info" style="margin-top:12px;font-size:12px;">سيُولَّد رقم لوحة جديد تلقائياً وتُرسل البيانات للمدير للاعتماد النهائي.</div>
+          <button class="btn btn-primary btn-block" onclick="actSubmitBuyerData()">حفظ بيانات المشتري وإرسال للاعتماد النهائي</button>
+        </div>
+      </div>`;
+  }
+
+  // المرحلة 4 → ADMIN اعتماد نهائي
+  if (t.status === 'step4_pending_final' && role === 'ADMIN') {
+    return `
+      <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+        <div class="card-header">⚖️ الاعتماد النهائي لإصدار اللوحة</div>
+        <div class="card-body">
+          <p class="text-muted" style="font-size:13px;margin-bottom:12px;">راجع بيانات البائع والمشتري واللوحة الجديدة أعلاه، ثم اعتمد لإرسال أمر الإصدار لقسم اللوحات.</p>
+          <div class="form-group">
+            <label class="form-label">سبب الرفض (في حال الرفض)</label>
+            <textarea class="form-input" id="act_final_reject_reason" rows="2" placeholder="سبب الرفض — مطلوب عند الرفض فقط"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-success" style="flex:1;" onclick="actFinalApproval('approved')">✅ اعتماد نهائي</button>
+            <button class="btn btn-danger" style="flex:1;" onclick="actFinalApproval('rejected')">❌ رفض</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // المرحلة 5 → PLATE_DEPT/ADMIN يُصدر اللوحة
+  if (t.status === 'step5_approved_for_plate' && (role === 'PLATE_DEPT' || role === 'ADMIN')) {
+    return `
+      <div class="card" style="margin-top:14px;border:2px solid var(--blue);">
+        <div class="card-header">🏷️ إصدار اللوحة الجديدة</div>
+        <div class="card-body">
+          <div style="background:var(--warning-bg);border:1px solid var(--gold);border-radius:8px;padding:12px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:var(--warning);">💰 رسم إصدار اللوحة</div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:2px;">يُستلم من المشتري قبل تسليم اللوحة</div>
+              </div>
+              <div style="font-size:22px;font-weight:900;color:var(--warning);">30 د.ل</div>
+            </div>
+            <div class="form-group" style="margin-top:10px;margin-bottom:0;">
+              <label class="form-label">تأكيد استلام الرسم <span style="color:var(--danger)">*</span></label>
+              <select class="form-select" id="act_fee_paid">
+                <option value="">— اختر —</option>
+                <option value="yes">✅ تم الاستلام</option>
+                <option value="no">❌ لم يُستلم بعد</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-success btn-block" onclick="actIssuePlate()">إصدار اللوحة الجديدة</button>
+        </div>
+      </div>`;
+  }
+
+  return '';
+}
+
+function wireActionSection(t) {
+  if (t.status === 'step1_suspended' && (role === 'REG_CHIEF' || role === 'ADMIN')) loadContractWriters();
+}
+
+// ════════════════════════════════════════════════════════════
+// محرّرو العقود
+// ════════════════════════════════════════════════════════════
+async function loadContractWriters() {
+  try {
+    const res  = await fetch('/api/v1/contract-writers', { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (data.success && Array.isArray(data.data)) {
+      _writers = data.data;
+      const sel = document.getElementById('act_contract_writer');
+      if (sel) sel.innerHTML = '<option value="">— اختر محرر العقد —</option>' +
+        _writers.map(w => `<option value="${w.id}">${w.name}${w.court_number ? ' — ' + w.court_number : ''}</option>`).join('');
+    }
+  } catch(_) {}
+}
+
+// ════════════════════════════════════════════════════════════
+// المرحلة 1 — إرسال للمدير
+// ════════════════════════════════════════════════════════════
+async function actSubmitToAdmin() {
+  const writer = document.getElementById('act_contract_writer').value;
+  const number = document.getElementById('act_contract_number').value.trim();
+  const notes  = document.getElementById('act_notes').value.trim();
+  if (!confirm('هل تريد إرسال طلب النقل إلى المدير للموافقة؟')) return;
+  const res = await fetch('/api/v1/transfers/submit', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: parseInt(tid), contract_writer_id: writer ? parseInt(writer) : null, contract_number: number || null, notes: notes || null })
+  });
+  const d = await res.json();
+  if (d.success) { showAlert('✅ أُرسل الطلب إلى المدير بنجاح','success'); load(); }
+  else showAlert(d.message || 'تعذّر الإرسال', 'error');
+}
+
+// ════════════════════════════════════════════════════════════
+// المرحلة 2 — قرار المدير
+// ════════════════════════════════════════════════════════════
+async function actAdminDecision(decision) {
+  const reason = document.getElementById('act_reject_reason').value.trim();
+  if (decision === 'rejected' && !reason) { showAlert('سبب الرفض مطلوب', 'error'); return; }
+  if (!confirm(decision === 'approved' ? 'هل تريد الموافقة على طلب النقل؟' : 'هل تريد رفض طلب النقل؟ سيُلغى تعليق اللوحة.')) return;
+  const res = await fetch('/api/v1/transfers/admin-decision', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: parseInt(tid), decision, reason: reason || null })
+  });
+  const d = await res.json();
+  if (d.success) { showAlert(decision === 'approved' ? '✅ تمت الموافقة — بانتظار بيانات المشتري' : '❌ تم رفض الطلب', 'success'); load(); }
+  else showAlert(d.message || 'تعذّر تنفيذ القرار', 'error');
+}
+
+// ════════════════════════════════════════════════════════════
+// المرحلة 3 — بيانات المشتري + جلب تلقائي
+// ════════════════════════════════════════════════════════════
+let _bNidTimer;
+async function lookupBuyerByNid(val) {
+  const el = document.getElementById('b-nid-lookup-result');
+  el.textContent = '';
+  if (!val || val.length < 5) return;
+  clearTimeout(_bNidTimer);
+  _bNidTimer = setTimeout(async () => {
+    try {
+      el.textContent = '⏳ جارٍ البحث...';
+      el.style.color = 'var(--text-4)';
+      const res  = await fetch(`/api/v1/citizen/lookup?national_id=${encodeURIComponent(val)}`, { headers:{Authorization:'Bearer '+T} });
+      const data = await res.json();
+      if (data.success && data.data) {
+        el.style.color = 'var(--success)';
+        el.innerHTML = `✅ مسجّل في البوابة — <strong>${data.data.full_name}</strong>`;
+        fillBuyerFromCitizen(data.data);
+      } else {
+        el.style.color = 'var(--text-3)';
+        el.textContent = '⚪ غير مسجّل في البوابة الإلكترونية — يمكن إدخال بياناته يدوياً';
+      }
+    } catch(e) { el.textContent = ''; }
+  }, 700);
+}
+
+function fillBuyerFromCitizen(d) {
+  const fill = (id, val) => {
+    if (!val) return;
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) el.value = val;
+  };
+  fill('b_name',  d.full_name);
+  fill('b_phone', d.phone);
+}
+
+async function actSubmitBuyerData() {
+  const payload = {
+    transfer_id:        parseInt(tid),
+    to_owner_national_id: document.getElementById('b_nid').value.trim(),
+    to_owner_name:        document.getElementById('b_name').value.trim(),
+    to_owner_id_card:     document.getElementById('b_id_card').value.trim() || null,
+    to_owner_passport:    document.getElementById('b_passport').value.trim() || null,
+    to_driving_license:   document.getElementById('b_license').value.trim() || null,
+    to_owner_phone:       document.getElementById('b_phone').value.trim() || null,
+    to_address:           document.getElementById('b_address').value.trim() || null,
+  };
+  if (!payload.to_owner_national_id) { showAlert('الرقم الوطني للمشتري مطلوب', 'error'); return; }
+  if (!payload.to_owner_name)        { showAlert('اسم المشتري مطلوب', 'error'); return; }
+  if (payload.to_owner_national_id === _currentTransfer?.from_owner_national_id) {
+    showAlert('لا يمكن أن يكون المشتري هو نفسه البائع', 'error'); return;
+  }
+  if (!confirm('هل تريد حفظ بيانات المشتري وإرسال الطلب للاعتماد النهائي؟')) return;
+
+  const res = await fetch('/api/v1/transfers/buyer-data', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const d = await res.json();
+  if (d.success) { showAlert(`✅ تم الحفظ — اللوحة الجديدة: ${d.data?.new_plate||''} — أُرسل للاعتماد النهائي`, 'success'); load(); }
+  else showAlert(d.message || 'تعذّر الحفظ', 'error');
+}
+
+// ════════════════════════════════════════════════════════════
+// المرحلة 4 — اعتماد نهائي
+// ════════════════════════════════════════════════════════════
+async function actFinalApproval(decision) {
+  const reason = document.getElementById('act_final_reject_reason').value.trim();
+  if (decision === 'rejected' && !reason) { showAlert('سبب الرفض مطلوب', 'error'); return; }
+  if (!confirm(decision === 'approved' ? 'هل تريد الاعتماد النهائي وإرسال أمر إصدار اللوحة؟' : 'هل تريد رفض الطلب نهائياً؟')) return;
+  const res = await fetch('/api/v1/transfers/final-approval', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: parseInt(tid), decision, reason: reason || null })
+  });
+  const d = await res.json();
+  if (d.success) { showAlert(decision === 'approved' ? '✅ اعتماد نهائي — أُرسل أمر الإصدار لقسم اللوحات' : '❌ تم رفض الطلب نهائياً', 'success'); load(); }
+  else showAlert(d.message || 'تعذّر تنفيذ القرار', 'error');
+}
+
+// ════════════════════════════════════════════════════════════
+// المرحلة 5 — إصدار اللوحة الجديدة
+// ════════════════════════════════════════════════════════════
+async function actIssuePlate() {
+  const fee = document.getElementById('act_fee_paid').value;
+  if (!fee)        { showAlert('يرجى تأكيد حالة استلام الرسم (30 دينار)', 'error'); return; }
+  if (fee === 'no'){ showAlert('لا يمكن إصدار اللوحة قبل استلام الرسم', 'error'); return; }
+  if (!confirm('هل تريد إصدار اللوحة الجديدة وإتمام نقل الملكية نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
+
+  const res = await fetch('/api/v1/transfers/issue-plate', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: parseInt(tid), fee_paid: true })
+  });
+  const d = await res.json();
+  if (d.success) { showAlert(`✅ تم إصدار اللوحة الجديدة: ${d.data?.new_plate||''} — اكتمل نقل الملكية`, 'success'); load(); }
+  else showAlert(d.message || 'تعذّر الإصدار', 'error');
+}
+
+load();
+</script>
+</body>
+</html>

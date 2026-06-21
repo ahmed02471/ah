@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الفحص الفني — نظام مرور سبها</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="with-sidebar">
+    
+    
+    
+    
+
+    <div id="sidebar-container"></div>
+  <script src="/js/sidebar.js"></script>
+  <div class="main-content">
+        <div class="page-wrapper">
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">سجل الفحوصات الفنية</h1>
+                    <p class="page-subtitle">تاريخ جميع الفحوصات الفنية المنجزة</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+                    الفحوصات السابقة
+                </div>
+                <div class="card-body" style="padding-bottom:0;">
+                    <div class="filter-row" style="margin:0 0 4px;">
+                        <select class="form-select" id="filter-result" style="max-width:180px;">
+                            <option value="">كل النتائج</option>
+                            <option value="صالحة">صالحة</option>
+                            <option value="غير صالحة">غير صالحة</option>
+                        </select>
+                        <input class="form-input" type="search" id="search-plate" placeholder="ابحث برقم اللوحة..." style="max-width:260px;">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table">
+                        <thead><tr>
+                            <th>رقم اللوحة</th>
+                            <th>تاريخ الفحص</th>
+                            <th>الفاحص</th>
+                            <th>النتيجة</th>
+                            <th>صالح حتى</th>
+                            <th>ملاحظات</th>
+                        </tr></thead>
+                        <tbody id="insp-tbody">
+                            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">جارٍ التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <button class="btn btn-secondary btn-sm" id="prev-page" onclick="changePage(-1)" disabled>السابق</button>
+                    <span id="page-info" style="font-size:.875rem;color:var(--text-2);">صفحة 1</span>
+                    <button class="btn btn-secondary btn-sm" id="next-page" onclick="changePage(1)">التالي</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1; const pageSize = 20;
+        async function loadInspections() {
+            const result = document.getElementById('filter-result').value;
+            const plate  = document.getElementById('search-plate').value.trim();
+            const params = new URLSearchParams({ page: currentPage, limit: pageSize, ...(result && { result }), ...(plate && { plate }) });
+            const tbody = document.getElementById('insp-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-3);">جارٍ التحميل...</td></tr>`;
+            try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/v1/inspections?' + params, { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (!data.success) throw new Error();
+                const { inspections, total } = data.data;
+                document.getElementById('prev-page').disabled = currentPage === 1;
+                document.getElementById('next-page').disabled = currentPage * pageSize >= total;
+                document.getElementById('page-info').textContent = `صفحة ${currentPage}`;
+                if (!inspections.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-state-title">لا توجد فحوصات</span></div></td></tr>`; return; }
+                tbody.innerHTML = inspections.map(i => `<tr>
+                    <td class="font-mono">${i.plate_number || '—'}</td>
+                    <td>${i.inspection_date ? new Date(i.inspection_date).toLocaleDateString('ar-LY') : '—'}</td>
+                    <td>${i.inspector_name || '—'}</td>
+                    <td><span class="badge ${i.result === 'صالحة' ? 'badge-green' : 'badge-red'}">${i.result}</span></td>
+                    <td>${i.valid_until ? new Date(i.valid_until).toLocaleDateString('ar-LY') : '—'}</td>
+                    <td style="color:var(--text-2);font-size:.85rem;">${i.notes || '—'}</td>
+                </tr>`).join('');
+            } catch { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:32px;">خطأ في تحميل البيانات</td></tr>`; }
+        }
+        function changePage(dir) { currentPage = Math.max(1, currentPage + dir); loadInspections(); }
+        document.getElementById('filter-result').addEventListener('change', () => { currentPage=1; loadInspections(); });
+        let t; document.getElementById('search-plate').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { currentPage=1; loadInspections(); }, 500); });
+        loadInspections();
+    </script>
+</body>
+</html>

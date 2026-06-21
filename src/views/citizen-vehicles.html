@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>مركباتي — مرور سبها</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root{--primary:#2563EB;--primary-l:#EFF6FF;--success:#16A34A;--danger:#DC2626;--warning:#D97706;--bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;--text:#0F172A;--text2:#475569;--text3:#94A3B8;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Cairo',sans-serif;background:var(--bg);direction:rtl;min-height:100dvh;padding-bottom:72px;color:var(--text);}
+    .hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(15,23,42,.05);}
+    .back{width:36px;height:36px;background:var(--bg);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;}
+    .back svg{width:18px;height:18px;}
+    .hdr-title{font-size:16px;font-weight:800;color:var(--text);}
+    .section{padding:14px;}
+    .veh-full-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);box-shadow:0 1px 6px rgba(15,23,42,.05);margin-bottom:14px;overflow:hidden;}
+    .vfc-head{padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+    .vfc-icon{width:44px;height:44px;background:var(--primary-l);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .vfc-icon svg{width:22px;height:22px;color:var(--primary);}
+    .vfc-plate{font-size:17px;font-weight:900;font-family:monospace;color:var(--text);}
+    .vfc-model{font-size:12px;color:var(--text3);margin-top:2px;}
+    .expand-btn{margin-right:auto;color:var(--text3);background:none;border:none;cursor:pointer;}
+    .vfc-body{padding:0 14px 14px;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+    .info-item{background:var(--bg);border-radius:10px;padding:9px 11px;}
+    .info-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+    .info-val{font-size:13px;font-weight:600;color:var(--text);}
+    .docs-section{border-top:1px solid var(--border);padding-top:12px;margin-top:4px;}
+    .doc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+    .doc-row:last-child{border-bottom:none;}
+    .doc-name{font-size:13px;font-weight:600;color:var(--text2);}
+    .doc-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+    .doc-status.ok  {background:#DCFCE7;color:var(--success);}
+    .doc-status.warn{background:#FFFBEB;color:var(--warning);}
+    .doc-status.bad {background:#FEF2F2;color:var(--danger);}
+    .pay-hint{margin-top:10px;padding:8px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;font-size:12px;color:var(--danger);font-weight:600;}
+    .bot-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:6px 0 10px;z-index:50;box-shadow:0 -4px 16px rgba(15,23,42,.06);}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:var(--text3);padding:4px;}
+    .nav-item svg{width:22px;height:22px;}
+    .nav-item span{font-size:9px;font-family:'Cairo',sans-serif;}
+    .nav-item.active{color:var(--primary);}
+    .loading{text-align:center;padding:30px;color:var(--text3);font-size:13px;}
+    .empty{text-align:center;padding:40px 20px;color:var(--text3);}
+    .sell-btn{display:flex;align-items:center;gap:6px;justify-content:center;width:100%;margin-top:10px;padding:9px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#c2410c;font-size:13px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;}
+    .sell-btn:active{background:#ffedd5;}
+    /* bottom sheet */
+    .sheet-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:100;display:none;align-items:flex-end;}
+    .sheet-overlay.open{display:flex;}
+    .sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:85dvh;overflow-y:auto;}
+    .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+    .sheet-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;}
+    .sheet-sub{font-size:12px;color:var(--text3);margin-bottom:16px;}
+    .upload-box{border:2px dashed var(--border);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--bg);margin-bottom:14px;transition:border-color .2s;}
+    .upload-box.has-file{border-color:var(--success);background:#f0fdf4;}
+    .upload-box p{font-size:12px;color:var(--text3);margin-top:6px;}
+    .submit-btn{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;}
+    .submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .alert-sheet{padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;display:none;}
+    .alert-sheet.err{background:#fef2f2;color:var(--danger);border:1px solid #fecaca;display:block;}
+    .alert-sheet.ok {background:#f0fdf4;color:var(--success);border:1px solid #bbf7d0;display:block;}
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <button class="back" onclick="location.href='/citizen'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="hdr-title">مركباتي</span>
+  </div>
+  <div id="reservations-section" style="display:none;padding:14px 14px 0;">
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:#c2410c;margin-bottom:8px;">🏷️ لوحات محجوزة لك</div>
+      <div id="reservations-list"></div>
+    </div>
+  </div>
+  <div class="section" id="list"><div class="loading">جارٍ التحميل...</div></div>
+
+  <!-- نافذة طلب البيع -->
+  <div class="sheet-overlay" id="sell-overlay" onclick="closeSheet(event)">
+    <div class="sheet" id="sell-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">طلب بيع المركبة 🚗</div>
+      <div class="sheet-sub" id="sell-plate-label">اللوحة: —</div>
+      <div id="sheet-alert" class="alert-sheet"></div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7;">
+        سيتم تعليق المركبة مؤقتاً ريثما يتم استكمال إجراءات نقل الملكية. يُرجى رفع صورة عقد البيع إن وُجد.
+      </p>
+      <div class="upload-box" id="upload-box" onclick="document.getElementById('contract-file').click()">
+        <div style="font-size:28px;">📄</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text2);">اضغط لرفع عقد البيع</div>
+        <p>صورة أو PDF · اختياري</p>
+        <div id="file-name" style="font-size:12px;color:var(--success);margin-top:4px;display:none;"></div>
+      </div>
+      <input type="file" id="contract-file" accept="image/*,application/pdf" style="display:none" onchange="onFileSelect(this)">
+      <button class="submit-btn" id="submit-sell" onclick="submitSell()">تأكيد طلب البيع ←</button>
+    </div>
+  </div>
+
+  <nav class="bot-nav">
+    <a href="/citizen" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>الرئيسية</span></a>
+    <a href="/citizen/vehicles" class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg><span>مركباتي</span></a>
+    <a href="/citizen/violations" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg><span>مخالفاتي</span></a>
+    <a href="/citizen/signs" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg><span>العلامات</span></a>
+    <a href="/citizen/reports" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>بلاغ</span></a>
+  </nav>
+
+<script>
+const T = localStorage.getItem('auth_token');
+function expS(d){ if(!d)return'bad'; const n=Math.ceil((new Date(d)-new Date())/86400000); return n<0?'bad':n<30?'warn':'ok'; }
+
+async function load() {
+  const res  = await fetch('/api/v1/citizen/vehicles', { headers:{Authorization:'Bearer '+T} });
+  const data = await res.json();
+  if (!data.success) { document.getElementById('list').innerHTML=`<div class="empty"><p>حدث خطأ في التحميل</p></div>`; return; }
+  const vlist = data.data;
+  if (!vlist.length) { document.getElementById('list').innerHTML = `<div class="empty"><p>لا توجد مركبات مسجلة باسمك</p></div>`; return; }
+  document.getElementById('list').innerHTML = vlist.map((v,i) => {
+    const ins  = expS(v.ins_expiry); const bel = expS(v.bel_expiry); const insp = expS(v.insp_expiry);
+    // زر البيع: يظهر فقط إذا كانت المركبة نشطة بلا مخالفات ولا امتياز
+    const canSell = v.status==='active' && v.unpaid_count===0 && v.active_liens===0;
+    const isSuspended = v.status==='suspended';
+    return `
+    <div class="veh-full-card">
+      <div class="vfc-head" onclick="toggle('vb${i}')">
+        <div class="vfc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div>
+        <div>
+          <div class="vfc-plate">${v.plate_number}${isSuspended?` <span style="font-size:11px;color:#d97706;font-weight:600;">· معلّقة</span>`:''}</div>
+          <div class="vfc-model">${v.make} ${v.model} ${v.year} · ${v.color}</div>
+        </div>
+        <button class="expand-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="arrow${i}"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+      <div class="vfc-body" id="vb${i}" style="display:none;">
+        ${v.unpaid_count>0 ? `<div class="pay-hint">⚠️ ${v.unpaid_count} مخالفة غير مدفوعة بإجمالي ${v.unpaid_total} د.ل — توجه لقسم المخالفات</div>` : ''}
+        <div class="info-grid">
+          <div class="info-item"><div class="info-lbl">نوع المركبة</div><div class="info-val">${v.vehicle_type||'—'}</div></div>
+          <div class="info-item"><div class="info-lbl">الاستخدام</div><div class="info-val">${v.usage_type||'—'}</div></div>
+          <div class="info-item"><div class="info-lbl">رقم الهيكل</div><div class="info-val" style="font-family:monospace;font-size:11px;">${v.chassis_number||'—'}</div></div>
+          <div class="info-item"><div class="info-lbl">بلد الصنع</div><div class="info-val">${v.country_of_origin||'—'}</div></div>
+        </div>
+        <div class="docs-section">
+          <div class="doc-row"><span class="doc-name">التأمين</span><span class="doc-status ${ins}">${ins==='ok'?`✅ ${v.ins_expiry}`:ins==='warn'?`⚠️ ${v.ins_expiry}`:v.ins_expiry?`❌ منتهٍ ${v.ins_expiry}`:'❌ غير مسجل'}</span></div>
+          <div class="doc-row"><span class="doc-name">البل (رخصة التجول)</span><span class="doc-status ${bel}">${bel==='ok'?`✅ ${v.bel_expiry}`:bel==='warn'?`⚠️ ${v.bel_expiry}`:v.bel_expiry?`❌ منتهٍ ${v.bel_expiry}`:'❌ غير مسجل'}</span></div>
+          <div class="doc-row"><span class="doc-name">الفحص الفني</span><span class="doc-status ${insp}">${insp==='ok'?`✅ ${v.insp_expiry}`:insp==='warn'?`⚠️ ${v.insp_expiry}`:v.insp_expiry?`❌ منتهٍ ${v.insp_expiry}`:'❌ غير مسجل'}</span></div>
+          ${v.active_liens>0 ? `<div class="doc-row"><span class="doc-name">حق الامتياز</span><span class="doc-status bad">⚠️ نشط — يمنع النقل</span></div>` : ''}
+        </div>
+        ${canSell ? `
+        <button class="sell-btn" onclick="openSellSheet(${v.id},'${v.plate_number}')">
+          🤝 طلب بيع المركبة
+        </button>` : isSuspended ? `
+        <div style="margin-top:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:12px;color:#92400e;font-weight:600;text-align:center;">
+          ⏳ طلب البيع قيد المعالجة — تواصل مع قسم التسجيل
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+// ── نافذة طلب البيع ──────────────────────────────────────────
+let sellVehicleId = null;
+function openSellSheet(vid, plate) {
+  sellVehicleId = vid;
+  document.getElementById('sell-plate-label').textContent = `اللوحة: ${plate}`;
+  document.getElementById('sheet-alert').className = 'alert-sheet';
+  document.getElementById('sheet-alert').textContent = '';
+  document.getElementById('contract-file').value = '';
+  document.getElementById('upload-box').className = 'upload-box';
+  document.getElementById('file-name').style.display = 'none';
+  document.getElementById('submit-sell').disabled = false;
+  document.getElementById('sell-overlay').classList.add('open');
+}
+
+function closeSheet(e) {
+  if (e && e.target !== document.getElementById('sell-overlay')) return;
+  document.getElementById('sell-overlay').classList.remove('open');
+}
+
+function onFileSelect(inp) {
+  const f = inp.files[0];
+  if (!f) return;
+  document.getElementById('upload-box').className = 'upload-box has-file';
+  const fn = document.getElementById('file-name');
+  fn.textContent = '✅ ' + f.name;
+  fn.style.display = 'block';
+}
+
+async function submitSell() {
+  const btn = document.getElementById('submit-sell');
+  const alertEl = document.getElementById('sheet-alert');
+  alertEl.className = 'alert-sheet';
+  alertEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '⏳ جارٍ الإرسال...';
+
+  try {
+    const fd = new FormData();
+    fd.append('vehicle_id', sellVehicleId);
+    const file = document.getElementById('contract-file').files[0];
+    if (file) fd.append('contract', file);
+
+    const res  = await fetch('/api/v1/citizen/suspend', {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+T },
+      body: fd
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alertEl.className = 'alert-sheet ok';
+      alertEl.textContent = '✅ تم تقديم طلب البيع — ستتواصل معك إدارة التسجيل';
+      btn.textContent = 'تم ✅';
+      setTimeout(() => { document.getElementById('sell-overlay').classList.remove('open'); load(); }, 2000);
+    } else {
+      alertEl.className = 'alert-sheet err';
+      alertEl.textContent = data.message || 'حدث خطأ';
+      btn.disabled = false;
+      btn.textContent = 'تأكيد طلب البيع ←';
+    }
+  } catch(e) {
+    alertEl.className = 'alert-sheet err';
+    alertEl.textContent = 'خطأ في الاتصال';
+    btn.disabled = false;
+    btn.textContent = 'تأكيد طلب البيع ←';
+  }
+}
+
+// ── تحميل الحجوزات ─────────────────────────────────────────
+async function loadReservations() {
+  try {
+    const res  = await fetch('/api/v1/citizen/plate-reservations', { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (!data.success || !data.data.length) return;
+    const sec = document.getElementById('reservations-section');
+    sec.style.display = 'block';
+    document.getElementById('reservations-list').innerHTML = data.data.map(r => {
+      const days = Math.ceil((new Date(r.expires_at)-new Date())/86400000);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #fed7aa;last-child{border:none}">
+        <div>
+          <div style="font-size:15px;font-weight:900;font-family:monospace;color:#9a3412;">${r.old_plate_number}</div>
+          <div style="font-size:11px;color:#c2410c;margin-top:2px;">تنتهي خلال ${days} يوم — ${r.expires_at.split(' ')[0]}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;padding:4px 10px;background:#ffedd5;border-radius:20px;color:#c2410c;">محجوزة</div>
+      </div>`;
+    }).join('');
+    document.getElementById('reservations-list').insertAdjacentHTML('beforeend',
+      `<p style="font-size:11px;color:#9a3412;margin-top:8px;line-height:1.6;">يمكنك استخدام هذه اللوحة عند تسجيل مركبة جديدة — أبلغ موظف التسجيل برقمك الوطني</p>`
+    );
+  } catch(_) {}
+}
+
+load();
+loadReservations();
+</script>
+</body>
+</html>

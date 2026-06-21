@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>طلب تسجيل مركبة</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family: 'Arial', sans-serif; direction:rtl; background:#fff; color:#000; font-size:13px; }
+    @page { size:A4; margin:20mm; }
+    @media print { .no-print{display:none!important;} }
+
+    .page { width:210mm; min-height:297mm; padding:15mm 20mm; margin:0 auto; background:#fff; position:relative; }
+
+    /* الترويسة */
+    .header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #000; padding-bottom:12px; margin-bottom:16px; }
+    .header-logo { width:70px; height:70px; }
+    .header-logo img { width:100%; height:100%; }
+    .header-center { text-align:center; flex:1; }
+    .header-center .ministry { font-size:12px; font-weight:bold; }
+    .header-center .dept { font-size:11px; color:#333; margin-top:3px; }
+    .header-center .sub-dept { font-size:10px; color:#555; margin-top:2px; }
+    .header-center .ref { font-size:12px; font-weight:bold; margin-top:6px; }
+    .header-left { text-align:left; font-size:11px; }
+
+    /* العنوان */
+    .title { text-align:center; margin:12px 0; }
+    .title h2 { font-size:15px; font-weight:bold; text-decoration:underline; }
+
+    /* المحتوى */
+    .salutation { margin:10px 0; font-size:13px; line-height:1.8; }
+    .request-text { font-size:13px; line-height:2; text-align:justify; margin:10px 0; }
+
+    /* بيانات المالك في جدول */
+    .data-table { width:100%; border-collapse:collapse; margin:12px 0; }
+    .data-table th, .data-table td { border:1px solid #000; padding:6px 10px; font-size:12px; text-align:right; }
+    .data-table th { background:#f0f0f0; font-weight:bold; width:35%; }
+
+    /* الوثائق المرفقة */
+    .docs-section { margin:12px 0; }
+    .docs-section h4 { font-size:12px; font-weight:bold; margin-bottom:6px; }
+    .docs-list { list-style:none; padding:0; }
+    .docs-list li { font-size:12px; margin-bottom:3px; }
+    .docs-list li::before { content:"☑ "; }
+
+    /* التوقيع */
+    .signatures { display:flex; justify-content:space-between; margin-top:30px; }
+    .sig-box { text-align:center; width:40%; }
+    .sig-box .sig-line { border-bottom:1px solid #000; margin:30px 0 6px; }
+    .sig-box .sig-label { font-size:11px; }
+
+    /* الطابع */
+    .stamp-area { text-align:center; margin:20px 0; }
+
+    .print-btn { position:fixed; bottom:20px; left:20px; padding:10px 20px; background:#1d4ed8; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-family:Arial; z-index:100; }
+    .print-btn:hover { background:#1e40af; }
+
+    .section-divider { border-top:1px dashed #999; margin:12px 0; }
+
+    /* المسح QR */
+    .qr-section { text-align:center; margin-top:16px; }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+
+<div class="page" id="page-content">
+
+  <!-- الترويسة -->
+  <div class="header">
+    <div class="header-logo">
+      <img src="/img/police-logo.png" width="80" height="80" alt="شعار وزارة الداخلية"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <svg viewBox="0 0 100 100" width="80" height="80" style="display:none;">
+        <circle cx="50" cy="50" r="45" fill="#1a2a6c" stroke="#888" stroke-width="2"/>
+        <text x="50" y="45" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">وزارة الداخلية</text>
+        <text x="50" y="58" text-anchor="middle" font-size="7" fill="#ccc">الشرطة</text>
+      </svg>
+    </div>
+
+    <div class="header-center">
+      <div class="ministry">دولة ليبيا</div>
+      <div class="ministry" style="font-size:11px;">وزارة الداخلية</div>
+      <div class="dept">مديرية أمن سبها</div>
+      <div class="sub-dept">إدارة مرور سبها — قسم التسجيل والترخيص</div>
+      <div class="ref" id="ref-num"></div>
+    </div>
+
+    <div class="header-left" style="text-align:left;">
+      <div style="font-weight:bold;">سبها</div>
+      <div id="req-date" style="margin-top:4px;"></div>
+      <div id="photo-box" style="margin-top:8px;width:80px;height:100px;border:1px solid #000;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;color:#666;text-align:center;">
+        صورة شخصية
+      </div>
+    </div>
+  </div>
+
+  <!-- العنوان -->
+  <div class="title">
+    <h2>طلب تسجيل مركبة جديدة</h2>
+  </div>
+
+  <!-- المخاطب -->
+  <div class="salutation">
+    السيد مدير مرور سبها المحترم
+    <br>تحية طيبة وبعد،،
+  </div>
+
+  <!-- نص الطلب -->
+  <div class="request-text" id="req-body">
+    يتشرف قسم التسجيل والترخيص بتقديم طلب تسجيل مركبة جديدة للمواطن
+    <strong id="owner-name-text"></strong>
+    حامل الرقم الوطني
+    <strong id="nid-text"></strong>
+    ، حيث تم التحقق من جميع الوثائق الثبوتية المقدمة وتبيّن استيفاؤها لشروط التسجيل.
+    <br><br>
+    لذا نرجو من سيادتكم التكرم بالموافقة على طلب التسجيل والإذن بإحالة الطلب لقسم الفحص الفني لإجراء الفحص اللازم، ومن ثم استكمال إجراءات إصدار اللوحة المعدنية.
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- بيانات المالك -->
+  <h4 style="font-size:12px;font-weight:bold;margin-bottom:6px;">أولاً: بيانات مقدم الطلب (المالك)</h4>
+  <table class="data-table" id="owner-table">
+    <tr><th>الاسم الكامل</th><td id="t-name"></td></tr>
+    <tr><th>الرقم الوطني / الإداري</th><td id="t-nid"></td></tr>
+    <tr><th>رقم البطاقة الشخصية</th><td id="t-idcard"></td></tr>
+    <tr><th>رقم جواز السفر</th><td id="t-passport"></td></tr>
+    <tr><th>رقم رخصة القيادة</th><td id="t-license"></td></tr>
+    <tr><th>رقم الهاتف</th><td id="t-phone"></td></tr>
+    <tr><th>العنوان</th><td id="t-address"></td></tr>
+    <tr><th>رقم مراجعة المواطن</th><td id="t-review"></td></tr>
+  </table>
+
+  <!-- الوثائق المقدمة -->
+  <div class="docs-section">
+    <h4>ثانياً: الوثائق المقدمة والمستوفاة</h4>
+    <ul class="docs-list">
+      <li>البطاقة الشخصية (أصل وصورة)</li>
+      <li>شهادة الميلاد</li>
+      <li>رخصة القيادة</li>
+      <li>الطلب الكتابي الرسمي</li>
+      <li>وثيقة ملكية المركبة</li>
+    </ul>
+  </div>
+
+  <!-- بيانات المركبة (عند توفرها) -->
+  <div id="vehicle-section" style="display:none;">
+    <div class="section-divider"></div>
+    <h4 style="font-size:12px;font-weight:bold;margin-bottom:6px;">ثالثاً: بيانات المركبة (من قسم الفحص الفني)</h4>
+    <table class="data-table" id="vehicle-table"></table>
+    <h4 style="font-size:12px;font-weight:bold;margin:8px 0 4px;">نتيجة الفحص الفني</h4>
+    <table class="data-table" id="insp-table"></table>
+  </div>
+
+  <!-- اللوحة المولّدة -->
+  <div id="plate-section" style="display:none;margin-top:12px;">
+    <div class="section-divider"></div>
+    <h4 style="font-size:12px;font-weight:bold;margin-bottom:6px;">رابعاً: اللوحة المولَّدة</h4>
+    <div style="border:2px solid #000;border-radius:6px;padding:10px;display:inline-block;min-width:200px;text-align:center;">
+      <div style="font-size:20px;font-weight:900;font-family:monospace;letter-spacing:3px;" id="plate-display"></div>
+      <img id="qr-img" style="width:100px;height:100px;margin-top:10px;display:none;border:1px solid #ccc;border-radius:4px;" alt="QR Code">
+      <div style="font-size:10px;color:#555;margin-top:4px;">Libya — LBY</div>
+    </div>
+  </div>
+
+  <!-- التوقيعات -->
+  <div class="signatures" style="margin-top:40px;">
+    <div class="sig-box">
+      <div class="sig-line"></div>
+      <div class="sig-label">رئيس قسم التسجيل والترخيص</div>
+      <div class="sig-label" style="margin-top:4px;font-size:10px;" id="reg-user-name"></div>
+    </div>
+    <div class="sig-box" style="text-align:center;">
+      <div style="font-size:10px;color:#777;padding-top:10px;">طابع مديرية الأمن</div>
+      <div style="width:80px;height:80px;border:2px dashed #999;border-radius:50%;margin:5px auto;"></div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-line"></div>
+      <div class="sig-label">مدير مرور سبها</div>
+      <div class="sig-label" style="margin-top:4px;font-size:10px;">(التوقيع والخاتم)</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;font-size:10px;color:#777;text-align:center;border-top:1px solid #ddd;padding-top:8px;">
+    تم إنشاء هذا الطلب إلكترونياً من نظام إدارة مرور سبها · رقم الطلب: <span id="req-id"></span>
+  </div>
+
+</div>
+
+<script>
+const T  = localStorage.getItem('auth_token');
+const id = location.pathname.split('/').pop();
+const userName = localStorage.getItem('user_name') || 'موظف التسجيل';
+
+async function load() {
+  const res  = await fetch(`/api/v1/vehicles/pending/${id}`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) { document.body.innerHTML = '<p style="color:red;padding:20px;">طلب غير موجود</p>'; return; }
+  const p  = data.data;
+  const vd = p.vehicle_data_parsed  || {};
+  const id2= p.inspection_data_parsed || {};
+  const bd = p.bel_data_parsed || {};
+
+  // الترويسة
+  document.getElementById('ref-num').textContent    = `رقم: 2026/${id}`;
+  document.getElementById('req-date').textContent   = new Date().toLocaleDateString('ar-LY',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('req-id').textContent     = `#${id}`;
+  document.getElementById('reg-user-name').textContent = userName;
+
+  // نص الطلب
+  document.getElementById('owner-name-text').textContent = p.owner_name;
+  document.getElementById('nid-text').textContent        = p.owner_national_id;
+
+  // الصورة الشخصية
+  if (p.photo_path) {
+    document.getElementById('photo-box').innerHTML =
+      `<img src="${p.photo_path}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+
+  // جدول المالك
+  document.getElementById('t-name').textContent    = p.owner_name    || '—';
+  document.getElementById('t-nid').textContent     = p.owner_national_id || '—';
+  document.getElementById('t-idcard').textContent  = p.owner_id_card || '—';
+  document.getElementById('t-passport').textContent= p.owner_passport|| '—';
+  document.getElementById('t-license').textContent = p.driving_license||'—';
+  document.getElementById('t-phone').textContent   = p.owner_phone   || '—';
+  document.getElementById('t-address').textContent = p.address       || '—';
+  document.getElementById('t-review').textContent  = p.citizen_review_number || '—';
+
+  // بيانات المركبة
+  if (vd.make) {
+    document.getElementById('vehicle-section').style.display='block';
+    document.getElementById('vehicle-table').innerHTML = `
+      <tr><th>نوع المركبة</th><td>${vd.vehicle_type||'—'}</td></tr>
+      <tr><th>الصانع / الموديل</th><td>${vd.make||'—'} ${vd.model||''} ${vd.year||''}</td></tr>
+      <tr><th>اللون</th><td>${vd.color||'—'}</td></tr>
+      <tr><th>رقم الهيكل</th><td>${vd.chassis_number||'—'}</td></tr>
+      <tr><th>رقم المحرك</th><td>${vd.engine_number||'—'}</td></tr>
+      <tr><th>بلد المنشأ</th><td>${vd.country_of_origin||'—'}</td></tr>
+      <tr><th>الوقود</th><td>${vd.fuel_type||'—'}</td></tr>`;
+    document.getElementById('insp-table').innerHTML = `
+      <tr><th>نتيجة الفحص</th><td>${id2.inspection_result||'—'}</td></tr>
+      <tr><th>صالح حتى</th><td>${id2.inspection_valid_until||'—'}</td></tr>
+      <tr><th>رسم الفحص</th><td>${id2.inspection_fee||'—'} د.ل</td></tr>`;
+  }
+
+  // اللوحة + QR
+  const plate    = p.plate_number || bd.plate_number;
+  const qrToken  = p.qr_token    || bd.qr_token;
+  if (plate) {
+    document.getElementById('plate-section').style.display='block';
+    document.getElementById('plate-display').textContent = plate;
+  }
+  if (qrToken) {
+    const qrImg = document.getElementById('qr-img');
+    if (qrImg) {
+      qrImg.src = '/api/v1/qr/' + qrToken;
+      qrImg.style.display = 'block';
+    }
+  }
+}
+
+load();
+</script>
+</body>
+</html>

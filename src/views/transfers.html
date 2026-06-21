@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نقل الملكية — نظام مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/dashboard">الرئيسية</a><span class="breadcrumb-sep">›</span><span>نقل الملكية</span></div>
+      <h1 class="page-title">نقل الملكية</h1>
+      <p class="page-subtitle">إدارة طلبات نقل ملكية المركبات</p>
+    </div>
+    <button class="btn btn-primary" onclick="openSuspendModal()">+ طلب نقل ملكية جديد</button>
+  </div>
+
+  <!-- مؤشر المسار -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:20px;">
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">🔒</div><div style="font-size:11px;font-weight:600;margin-top:4px;">1. تعليق اللوحة</div>
+    </div>
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">📤</div><div style="font-size:11px;font-weight:600;margin-top:4px;">2. إرسال للمدير</div>
+    </div>
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">✅</div><div style="font-size:11px;font-weight:600;margin-top:4px;">3. موافقة المدير</div>
+    </div>
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">👤</div><div style="font-size:11px;font-weight:600;margin-top:4px;">4. بيانات المشتري</div>
+    </div>
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">📋</div><div style="font-size:11px;font-weight:600;margin-top:4px;">5. اعتماد نهائي</div>
+    </div>
+    <div style="padding:10px;background:var(--surface-2);border-radius:8px;text-align:center;border:1px solid var(--border);">
+      <div style="font-size:18px;">🏷️</div><div style="font-size:11px;font-weight:600;margin-top:4px;">6. إصدار لوحة</div>
+    </div>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+  <div id="list"><div class="card"><div class="card-body text-center text-muted">جارٍ التحميل...</div></div></div>
+
+</div></div>
+
+<!-- Modal تعليق اللوحة -->
+<div class="modal-overlay" id="suspend-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:center;justify-content:center;">
+  <div class="modal-card" style="background:var(--surface-2);border-radius:14px;padding:24px;width:460px;border:1px solid var(--border);">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">🔒 طلب نقل ملكية — تعليق اللوحة</h3>
+
+    <div class="form-group">
+      <label class="form-label">رقم المركبة أو اللوحة <span class="req">*</span></label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="search-plate" placeholder="ابحث برقم اللوحة..." dir="ltr" style="flex:1;" onkeydown="if(event.key==='Enter')searchVehicle()">
+        <button class="btn btn-secondary btn-sm" onclick="searchVehicle()">بحث</button>
+      </div>
+    </div>
+
+    <div id="vehicle-found" style="display:none;background:var(--surface-3);border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;" id="vf-plate"></div>
+      <div style="font-size:12px;color:var(--text-3);" id="vf-info"></div>
+      <div style="font-size:12px;color:var(--text-3);" id="vf-owner"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-input" id="suspend-notes" rows="2" placeholder="سبب النقل أو ملاحظات..."></textarea>
+    </div>
+
+    <div class="alert alert-warning" style="font-size:12px;margin-bottom:14px;">
+      ⚠️ بعد التعليق، مهلة 7 أيام لإتمام النقل — بعدها تصدر مخالفة تلقائياً
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitSuspend()">🔒 تعليق اللوحة وبدء النقل</button>
+      <button class="btn btn-secondary" onclick="closeSuspendModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal إدخال بيانات المشتري -->
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;" id="buyer-modal">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:520px;border:1px solid var(--border);max-height:90vh;overflow-y:auto;">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">👤 بيانات المشتري (المالك الجديد)</h3>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:16px;">أدخل بيانات المشتري من وثائقه الرسمية</p>
+
+    <div id="transfer-summary-buyer" style="background:var(--surface-3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;"></div>
+
+    <div class="form-group"><label class="form-label">اسم المشتري <span class="req">*</span></label><input class="form-input" id="b-name"></div>
+    <div class="form-group"><label class="form-label">الرقم الوطني <span class="req">*</span></label><input class="form-input" id="b-nid" maxlength="12" dir="ltr"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">رقم البطاقة</label><input class="form-input" id="b-card" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">رخصة القيادة</label><input class="form-input" id="b-license" dir="ltr"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">رقم الهاتف</label><input class="form-input" id="b-phone" dir="ltr"></div>
+      <div class="form-group"><label class="form-label">جواز السفر</label><input class="form-input" id="b-passport" dir="ltr"></div>
+    </div>
+    <div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="b-address"></div>
+
+    <div class="alert alert-info" style="font-size:12px;margin-bottom:14px;">
+      🏁 سيتم توليد لوحة جديدة تلقائياً وإرسال النموذج للمدير للاعتماد النهائي
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;padding:12px;" onclick="submitBuyer()">إرسال للمدير للاعتماد النهائي</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('buyer-modal').style.display='none'">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+let selectedVehicle = null;
+let activeTrId = null;
+
+const STATUS_LABELS = {
+  'step1_suspended':        {label:'🔒 مُعلَّقة — انتظار إرسال للمدير',   cls:'badge-warning'},
+  'step2_pending_admin':    {label:'⏳ ينتظر موافقة المدير',              cls:'badge-warning'},
+  'step3_approved':         {label:'✅ موافقة — أدخل بيانات المشتري',     cls:'badge-success'},
+  'step4_pending_final':    {label:'⏳ ينتظر اعتماد نهائي',              cls:'badge-warning'},
+  'step5_approved_for_plate':{label:'✅ معتمد — PLATE_DEPT يُصدر اللوحة', cls:'badge-success'},
+  'completed':              {label:'✅ مكتمل',                            cls:'badge-success'},
+  'rejected':               {label:'❌ مرفوض',                            cls:'badge-danger'},
+  'expired':                {label:'⚠️ انتهت المهلة',                     cls:'badge-danger'},
+};
+
+async function load() {
+  const res  = await fetch('/api/v1/transfers', {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success || !data.data.length) {
+    document.getElementById('list').innerHTML = `<div class="card"><div class="card-body text-center text-muted" style="padding:40px;">لا توجد طلبات نقل ملكية</div></div>`;
+    return;
+  }
+  document.getElementById('list').innerHTML = data.data.map(tr => {
+    const st = STATUS_LABELS[tr.status] || {label:tr.status, cls:'badge-secondary'};
+    // حساب المهلة
+    const deadline = tr.deadline_at ? new Date(tr.deadline_at) : null;
+    const daysLeft = deadline ? Math.ceil((deadline - new Date()) / 86400000) : null;
+    const actions = getActions(tr);
+
+    return `
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${tr.old_plate_number} → ${tr.new_plate_number||'لوحة جديدة قيد الإصدار'}</div>
+            <div style="font-size:12px;color:var(--text-3);">
+              البائع: ${tr.from_owner_name} | ${tr.to_owner_name ? 'المشتري: '+tr.to_owner_name : 'المشتري: لم يُدخل بعد'}
+            </div>
+            <div style="font-size:12px;color:var(--text-3);">
+              ${tr.make||''} ${tr.model||''} ${tr.year||''} · طلب #${tr.id} · ${tr.created_at?.split(' ')[0]||''}
+            </div>
+          </div>
+          <div style="text-align:left;">
+            <span class="badge ${st.cls}">${st.label}</span>
+            ${daysLeft !== null && tr.status==='step1_suspended' ? `<div style="font-size:11px;color:${daysLeft<2?'var(--danger)':'var(--text-3)'};margin-top:4px;">⏱ ${daysLeft > 0 ? daysLeft+' أيام متبقية' : 'انتهت المهلة'}</div>` : ''}
+          </div>
+        </div>
+        ${actions ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${actions}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getActions(tr) {
+  const id = tr.id;
+  let acts = '';
+
+  if (role === 'REG_CHIEF') {
+    if (tr.status === 'step1_suspended')
+      acts += `<button class="btn btn-primary btn-sm" onclick="submitToAdmin(${id},'${tr.old_plate_number}')">📤 إرسال طلب للمدير</button>`;
+    if (tr.status === 'step3_approved')
+      acts += `<button class="btn btn-success btn-sm" onclick="openBuyerModal(${id},'${tr.from_owner_name}','${tr.old_plate_number}')">👤 إدخال بيانات المشتري</button>`;
+  }
+  if (role === 'ADMIN') {
+    if (tr.status === 'step2_pending_admin')
+      acts += `<button class="btn btn-success btn-sm" onclick="adminDecide(${id},'approved')">✅ موافقة</button><button class="btn btn-danger btn-sm" onclick="adminDecide(${id},'rejected')">❌ رفض</button>`;
+    if (tr.status === 'step4_pending_final')
+      acts += `<a href="/transfers/${id}" class="btn btn-primary btn-sm">📋 مراجعة واعتماد نهائي</a>`;
+  }
+  if (role === 'PLATE_DEPT' && tr.status === 'step5_approved_for_plate')
+    acts += `<button class="btn btn-success btn-sm" onclick="issuePlate(${id})">🏷️ إصدار اللوحة (30 دينار)</button>`;
+
+  acts += `<a href="/transfers/${id}" class="btn btn-secondary btn-sm">عرض التفاصيل</a>`;
+  return acts;
+}
+
+// ── تعليق اللوحة ──────────────────────────────────────────────
+function openSuspendModal() {
+  selectedVehicle = null;
+  document.getElementById('search-plate').value = '';
+  document.getElementById('vehicle-found').style.display = 'none';
+  document.getElementById('suspend-notes').value = '';
+  document.getElementById('suspend-modal').style.display = 'flex';
+}
+function closeSuspendModal() { document.getElementById('suspend-modal').style.display = 'none'; }
+
+async function searchVehicle() {
+  const q = document.getElementById('search-plate').value.trim();
+  if (!q) return;
+  const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(q)}&limit=1`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (data.success && data.data.vehicles?.length) {
+    selectedVehicle = data.data.vehicles[0];
+    document.getElementById('vehicle-found').style.display = 'block';
+    document.getElementById('vf-plate').textContent  = selectedVehicle.plate_number;
+    document.getElementById('vf-info').textContent   = `${selectedVehicle.make||''} ${selectedVehicle.model||''} ${selectedVehicle.year||''} — ${selectedVehicle.color||''}`;
+    document.getElementById('vf-owner').textContent  = `المالك: ${selectedVehicle.owner_name||'—'}`;
+  } else showAlert('لم يتم العثور على مركبة', 'error');
+}
+
+async function submitSuspend() {
+  if (!selectedVehicle) { showAlert('ابحث عن المركبة أولاً', 'error'); return; }
+  const res  = await fetch('/api/v1/transfers/suspend', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ vehicle_id: selectedVehicle.id, notes: document.getElementById('suspend-notes').value })
+  });
+  const data = await res.json();
+  if (data.success) { closeSuspendModal(); showAlert(`✅ تم تعليق اللوحة — المهلة حتى: ${data.data.deadline.split(' ')[0]}`,'success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+// ── إرسال للمدير ──────────────────────────────────────────────
+async function submitToAdmin(id, plate) {
+  if (!confirm(`إرسال طلب نقل ملكية ${plate} للمدير؟`)) return;
+  const res  = await fetch('/api/v1/transfers/submit', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: id })
+  });
+  const data = await res.json();
+  if (data.success) { showAlert('✅ تم إرسال الطلب للمدير','success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+// ── موافقة/رفض المدير ─────────────────────────────────────────
+async function adminDecide(id, decision) {
+  const reason = decision==='rejected' ? prompt('سبب الرفض:') : '';
+  if (decision==='rejected' && !reason) return;
+  const res  = await fetch('/api/v1/transfers/admin-decision', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: id, decision, reason })
+  });
+  const data = await res.json();
+  if (data.success) { showAlert(decision==='approved'?'✅ موافقة — أُرسل إشعار لقسم التسجيل':'❌ تم الرفض','success'); setTimeout(load,1000); }
+  else showAlert(data.message,'error');
+}
+
+// ── بيانات المشتري ────────────────────────────────────────────
+function openBuyerModal(id, seller, plate) {
+  activeTrId = id;
+  document.getElementById('transfer-summary-buyer').innerHTML =
+    `<strong>نقل ملكية:</strong> ${plate} | البائع: ${seller}`;
+  ['b-name','b-nid','b-card','b-license','b-phone','b-passport','b-address'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('buyer-modal').style.display = 'flex';
+}
+
+async function submitBuyer() {
+  const nid  = document.getElementById('b-nid').value.trim();
+  const name = document.getElementById('b-name').value.trim();
+  if (!nid || !name) { showAlert('اسم المشتري ورقمه الوطني مطلوبان','error'); return; }
+  if (!/^\d{12}$/.test(nid)) { showAlert('الرقم الوطني 12 رقم','error'); return; }
+
+  const res  = await fetch('/api/v1/transfers/buyer-data', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({
+      transfer_id: activeTrId,
+      to_owner_national_id: nid,
+      to_owner_name: name,
+      to_owner_id_card:   document.getElementById('b-card').value.trim(),
+      to_owner_passport:  document.getElementById('b-passport').value.trim(),
+      to_driving_license: document.getElementById('b-license').value.trim(),
+      to_owner_phone:     document.getElementById('b-phone').value.trim(),
+      to_address:         document.getElementById('b-address').value.trim(),
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('buyer-modal').style.display = 'none';
+    showAlert(`✅ اللوحة الجديدة: ${data.data.new_plate} — أُرسلت للمدير للاعتماد النهائي`,'success');
+    setTimeout(load,1500);
+  } else showAlert(data.message,'error');
+}
+
+// ── إصدار اللوحة ─────────────────────────────────────────────
+async function issuePlate(id) {
+  if (!confirm('تأكيد استلام 30 دينار وإصدار اللوحة الجديدة؟')) return;
+  const res  = await fetch('/api/v1/transfers/issue-plate', {
+    method:'POST', headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ transfer_id: id, fee_paid: 30 })
+  });
+  const data = await res.json();
+  if (data.success) { showAlert(`✅ تم إصدار اللوحة الجديدة: ${data.data.new_plate}`,'success'); setTimeout(load,1500); }
+  else showAlert(data.message,'error');
+}
+
+function showAlert(msg,type){const el=document.getElementById('alert');el.className=`alert alert-${type==='error'?'error':'success'}`;el.textContent=msg;el.style.display='flex';setTimeout(()=>el.style.display='none',6000);}
+load(); setInterval(load,30000);
+</script>
+</body>
+</html>

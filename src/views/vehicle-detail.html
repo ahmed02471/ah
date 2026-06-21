@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاصيل المركبة — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div id="sidebar-container"></div>
+<script src="/js/sidebar.js"></script>
+<div class="main-content"><div class="page-wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb"><a href="/vehicles">المركبات</a><span class="breadcrumb-sep">›</span><span id="bc-plate">—</span></div>
+      <h1 class="page-title" id="pg-title">تفاصيل المركبة</h1>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" id="print-qr-btn" style="display:none;" onclick="printQR()">🖨️ طباعة QR</button>
+      <a href="/vehicles" class="btn btn-secondary">رجوع</a>
+    </div>
+  </div>
+
+  <div id="alert" class="alert" style="display:none;margin-bottom:14px;"></div>
+  <div id="content"></div>
+
+</div></div>
+
+<!-- Modal إضافة تأمين -->
+<div id="ins-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:440px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">🛡️ إضافة بيانات التأمين</h3>
+      <button onclick="closeIns()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">شركة التأمين <span class="req">*</span></label>
+      <input class="form-input" id="ins-company" placeholder="مثال: شركة الوطنية للتأمين">
+    </div>
+    <div class="form-group">
+      <label class="form-label">رقم وثيقة التأمين <span class="req">*</span></label>
+      <input class="form-input" id="ins-policy" dir="ltr" placeholder="رقم الوثيقة">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">تاريخ البداية</label>
+        <input class="form-input" id="ins-from" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تاريخ الانتهاء <span class="req">*</span></label>
+        <input class="form-input" id="ins-until" type="date">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitIns()">💾 حفظ التأمين</button>
+      <button class="btn btn-secondary" onclick="closeIns()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal تعديل بيانات المركبة -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:460px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">✏️ تعديل بيانات المركبة</h3>
+      <button onclick="closeEdit()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">نوع المركبة</label>
+        <input class="form-input" id="edit-type">
+      </div>
+      <div class="form-group">
+        <label class="form-label">الاستخدام</label>
+        <input class="form-input" id="edit-usage">
+      </div>
+      <div class="form-group">
+        <label class="form-label">الصانع</label>
+        <input class="form-input" id="edit-make">
+      </div>
+      <div class="form-group">
+        <label class="form-label">الموديل</label>
+        <input class="form-input" id="edit-model">
+      </div>
+      <div class="form-group">
+        <label class="form-label">سنة الصنع</label>
+        <input class="form-input" id="edit-year" type="number">
+      </div>
+      <div class="form-group">
+        <label class="form-label">اللون</label>
+        <input class="form-input" id="edit-color">
+      </div>
+      <div class="form-group">
+        <label class="form-label">نوع الوقود</label>
+        <input class="form-input" id="edit-fuel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">عدد الأسطوانات</label>
+        <input class="form-input" id="edit-cylinders" type="number">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">بلد المنشأ</label>
+        <input class="form-input" id="edit-origin">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitEdit()">💾 حفظ التعديلات</button>
+      <button class="btn btn-secondary" onclick="closeEdit()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal تحديث البل -->
+<div id="permit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:420px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">📄 تحديث رخصة التجول (البل)</h3>
+      <button onclick="closePermit()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">تاريخ البداية</label>
+        <input class="form-input" id="permit-from" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">صالح حتى <span class="req">*</span></label>
+        <input class="form-input" id="permit-until" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">الرسم (د.ل)</label>
+      <input class="form-input" id="permit-fee" type="number" placeholder="مثال: 100">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitPermit()">💾 حفظ التحديث</button>
+      <button class="btn btn-secondary" onclick="closePermit()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal تحديث الفحص الفني -->
+<div id="insp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center;">
+  <div style="background:var(--surface-2);border-radius:14px;padding:24px;width:420px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;">🔧 تحديث الفحص الفني</h3>
+      <button onclick="closeInsp()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-3);">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">نتيجة الفحص <span class="req">*</span></label>
+      <select class="form-input" id="insp-result">
+        <option value="صالحة">صالحة</option>
+        <option value="غير صالحة">غير صالحة</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label class="form-label">تاريخ البداية</label>
+        <input class="form-input" id="insp-from" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">صالح حتى <span class="req">*</span></label>
+        <input class="form-input" id="insp-until" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ملاحظات</label>
+      <input class="form-input" id="insp-notes" placeholder="مثال: مركبة سليمة وتجاوزت الفحص الفني">
+    </div>
+    <div class="form-group">
+      <label class="form-label">الرسم (د.ل)</label>
+      <input class="form-input" id="insp-fee" type="number" placeholder="مثال: 50">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitInsp()">💾 حفظ التحديث</button>
+      <button class="btn btn-secondary" onclick="closeInsp()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const T    = localStorage.getItem('auth_token');
+const role = localStorage.getItem('user_role');
+const vid  = location.pathname.split('/').pop();
+let V = null;
+
+async function load() {
+  const res  = await fetch(`/api/v1/vehicles/${vid}`, {headers:{Authorization:'Bearer '+T}});
+  const data = await res.json();
+  if (!data.success) { showAlert('المركبة غير موجودة','error'); return; }
+  V = data.data;
+  render(V);
+}
+
+function daysLeft(date) {
+  if (!date) return null;
+  return Math.ceil((new Date(date) - new Date()) / 86400000);
+}
+function expiryBadge(date, label) {
+  const d = daysLeft(date);
+  if (!date) return `<span style="color:var(--text-4);">—</span>`;
+  const color = d < 0 ? 'var(--danger)' : d < 30 ? '#d97706' : 'var(--success)';
+  const icon  = d < 0 ? '❌' : d < 30 ? '⚠️' : '✅';
+  return `<span style="color:${color};font-weight:600;">${icon} ${date}${d < 0 ? ' (منتهٍ)' : d < 30 ? ` (${d} يوم)` : ''}</span>`;
+}
+
+function render(v) {
+  document.getElementById('bc-plate').textContent  = v.plate_number || '—';
+  document.getElementById('pg-title').textContent  = `${v.make||''} ${v.model||''} ${v.year||''}`.trim() || 'تفاصيل المركبة';
+
+  const canEdit    = ['ADMIN','REG_CHIEF'].includes(role);
+  const canDelete  = role === 'ADMIN';
+  const canInspect = ['ADMIN','INSP_CHIEF'].includes(role);
+  const ins  = v.insurance  || {};
+  const bel  = v.bel        || {};
+  const insp = v.inspection || {};
+
+  document.getElementById('content').innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+    <!-- صف علوي: اللوحة + QR + الحالة -->
+    <div class="card" style="grid-column:1/-1;">
+      <div class="card-body" style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+
+        <!-- اللوحة المعدنية -->
+        <div style="background:linear-gradient(135deg,#0a1628,#1a3a6e);border-radius:12px;padding:16px 28px;text-align:center;min-width:200px;">
+          <div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:2px;margin-bottom:4px;">رقم اللوحة</div>
+          <div style="font-size:26px;font-weight:900;font-family:monospace;color:#fff;letter-spacing:3px;">${v.plate_number||'—'}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;">LIBYA · مرور سبها</div>
+        </div>
+
+        <!-- رمز QR -->
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;font-weight:600;">رمز QR المركبة</div>
+          <div id="qr-box" style="background:#fff;padding:8px;border-radius:8px;border:1px solid var(--border);display:inline-block;"></div>
+          <div style="margin-top:8px;display:flex;gap:6px;justify-content:center;">
+            <button onclick="printQR()" class="btn btn-secondary btn-sm">🖨️ طباعة</button>
+          </div>
+        </div>
+
+        <!-- ملخص الحالة -->
+        <div style="flex:1;min-width:200px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div style="background:var(--surface-3);border-radius:8px;padding:10px 12px;">
+              <div style="color:var(--text-4);font-size:10px;margin-bottom:3px;">الحالة</div>
+              <div>${v.status==='active'?'<span class="badge badge-success">✅ نشطة</span>':v.status==='suspended'?'<span class="badge badge-warning">🔒 مُعلَّقة</span>':v.status==='reported_stolen'?'<span class="badge badge-danger">🚨 مُبلَّغ عنها مسروقة</span>':v.status==='reported_lost_plate'?'<span class="badge badge-danger">🚨 مُبلَّغ عن ضياع لوحتها</span>':'<span class="badge badge-danger">⚠️ '+v.status+'</span>'}</div>
+              ${canEdit && v.status==='suspended' ? `<button onclick="unsuspendVehicle()" class="btn btn-secondary btn-sm" style="margin-top:6px;width:100%;">🔓 فك التعليق</button>` : ''}
+            </div>
+            <div style="background:var(--surface-3);border-radius:8px;padding:10px 12px;">
+              <div style="color:var(--text-4);font-size:10px;margin-bottom:3px;">المخالفات</div>
+              <div style="font-weight:700;color:${(v.unpaid_count||0)>0?'var(--danger)':'var(--success)'};">${(v.unpaid_count||0)>0?`⛔ ${v.unpaid_count} غير مدفوعة`:'✅ لا مخالفات'}</div>
+            </div>
+            <div style="background:var(--surface-3);border-radius:8px;padding:10px 12px;">
+              <div style="color:var(--text-4);font-size:10px;margin-bottom:3px;">🛡️ التأمين</div>
+              <div>${expiryBadge(ins.valid_until,'')}</div>
+              <div style="font-size:10px;color:var(--text-4);">${ins.company_name||'غير مُدخل'}</div>
+            </div>
+            <div style="background:var(--surface-3);border-radius:8px;padding:10px 12px;">
+              <div style="color:var(--text-4);font-size:10px;margin-bottom:3px;">📄 البل</div>
+              <div>${expiryBadge(bel.valid_until,'')}</div>
+            </div>
+            <div style="background:var(--surface-3);border-radius:8px;padding:10px 12px;">
+              <div style="color:var(--text-4);font-size:10px;margin-bottom:3px;">🔧 الفحص</div>
+              <div>${expiryBadge(insp.valid_until,'')}</div>
+              <div style="font-size:10px;color:var(--text-4);">${insp.result||'—'}</div>
+            </div>
+            ${canEdit ? `<div style="background:var(--blue-bg);border:1px dashed var(--blue);border-radius:8px;padding:10px 12px;cursor:pointer;" onclick="openIns()">
+              <div style="color:var(--blue);font-size:12px;font-weight:700;">+ إضافة تأمين</div>
+              <div style="font-size:10px;color:var(--text-4);">تحديث وثيقة التأمين</div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بيانات المالك -->
+    <div class="card">
+      <div class="card-header">👤 بيانات المالك</div>
+      <div class="card-body">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${row('الاسم الكامل', v.owner_name)}
+          ${row('الرقم الوطني', v.owner_national_id)}
+          ${row('رقم البطاقة', v.owner_id_card)}
+          ${row('رخصة القيادة', v.driving_license)}
+          ${row('رقم الهاتف', v.owner_phone)}
+          ${row('العنوان', v.address)}
+        </table>
+      </div>
+    </div>
+
+    <!-- بيانات المركبة -->
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;gap:8px;">
+        🚗 بيانات المركبة
+        <div style="margin-right:auto;display:flex;gap:6px;">
+          ${canEdit   ? `<button onclick="openEdit()" class="btn btn-secondary btn-sm">✏️ تعديل</button>` : ''}
+          ${canDelete ? `<button onclick="deleteVehicle()" class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;">🗑️ حذف</button>` : ''}
+        </div>
+      </div>
+      <div class="card-body">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${row('نوع المركبة', v.vehicle_type)}
+          ${row('الصانع / الموديل', (v.make||'')+ ' ' +(v.model||'') + ' ' + (v.year||''))}
+          ${row('اللون', v.color)}
+          ${row('رقم الهيكل', v.chassis_number, true)}
+          ${row('رقم المحرك', v.engine_number, true)}
+          ${row('بلد المنشأ', v.country_of_origin)}
+          ${row('الوقود', v.fuel_type)}
+          ${row('عدد الأسطوانات', v.cylinders)}
+          ${row('الاستخدام', v.usage_type)}
+        </table>
+      </div>
+    </div>
+
+    <!-- التأمين -->
+    <div class="card">
+      <div class="card-header">
+        🛡️ التأمين
+        ${canEdit ? `<button onclick="openIns()" class="btn btn-primary btn-sm" style="margin-right:auto;">+ تحديث</button>` : ''}
+      </div>
+      <div class="card-body">
+        ${ins.company_name ? `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${row('شركة التأمين', ins.company_name)}
+          ${row('رقم الوثيقة', ins.policy_number, true)}
+          ${row('من تاريخ', ins.valid_from)}
+          ${row('صالح حتى', ins.valid_until, false, expiryBadge(ins.valid_until,''))}
+        </table>` : `
+        <div style="text-align:center;padding:20px;color:var(--text-4);">
+          <div style="font-size:24px;margin-bottom:8px;">🛡️</div>
+          <div>لم يتم إدخال بيانات التأمين</div>
+          ${canEdit ? `<button onclick="openIns()" class="btn btn-primary btn-sm" style="margin-top:10px;">+ إضافة تأمين</button>` : ''}
+        </div>`}
+      </div>
+    </div>
+
+    <!-- البل والفحص -->
+    <div class="card">
+      <div class="card-header">📋 البل والفحص الفني</div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;">رخصة التجول (البل)</div>
+          ${canEdit ? `<button onclick="openPermit()" class="btn btn-primary btn-sm" style="margin-right:auto;padding:3px 10px;">🔄 تحديث البل</button>` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px;">
+          ${row('رقم البل', bel.permit_number, true)}
+          ${row('صالح حتى', bel.valid_until, false, expiryBadge(bel.valid_until,''))}
+        </table>
+        <div style="display:flex;align-items:center;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;">الفحص الفني</div>
+          ${canInspect ? `<button onclick="openInsp()" class="btn btn-primary btn-sm" style="margin-right:auto;padding:3px 10px;">🔄 تحديث الفحص</button>` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${row('نتيجة الفحص', insp.result)}
+          ${row('صالح حتى', insp.valid_until, false, expiryBadge(insp.valid_until,''))}
+          ${row('اسم الفاحص', insp.inspector_name)}
+        </table>
+      </div>
+    </div>
+
+    <!-- المخالفات -->
+    <div class="card" style="grid-column:1/-1;">
+      <div class="card-header">⚠️ سجل المخالفات</div>
+      <div class="card-body" style="padding:0;">
+        ${(v.violations||[]).length ? `
+        <table class="table">
+          <thead><tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th></tr></thead>
+          <tbody>
+          ${(v.violations||[]).map(vio=>`
+            <tr>
+              <td>${vio.type_name||vio.description||'—'}</td>
+              <td>${vio.fine_amount||0} د.ل</td>
+              <td style="font-size:11px;">${(vio.issued_at||'').split('T')[0]}</td>
+              <td><span class="badge ${vio.status==='paid'?'badge-success':vio.status==='unpaid'?'badge-danger':'badge-warning'}">${vio.status==='paid'?'مدفوعة':vio.status==='unpaid'?'غير مدفوعة':'مُحالة'}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>` : `<div style="padding:20px;text-align:center;color:var(--text-4);">✅ لا توجد مخالفات</div>`}
+      </div>
+    </div>
+
+  </div>`;
+
+  // توليد QR
+  if (v.qr_token) {
+    document.getElementById('print-qr-btn').style.display = 'flex';
+    const qrUrl = `http://localhost:3000/vehicles/qr/${v.qr_token}`;
+    try {
+      new QRCode(document.getElementById('qr-box'), {
+        text:         qrUrl,
+        width:        140,
+        height:       140,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) {
+      document.getElementById('qr-box').innerHTML =
+        `<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}" width="140" height="140">`;
+    }
+  } else {
+    document.getElementById('qr-box').innerHTML =
+      '<div style="width:140px;height:140px;display:flex;align-items:center;justify-content:center;color:var(--text-4);font-size:12px;">لم يُولَّد QR</div>';
+  }
+}
+
+function row(label, val, mono=false, custom=null) {
+  const display = custom || (val ? (mono ? `<span style="font-family:monospace;font-size:12px;">${val}</span>` : val) : '<span style="color:var(--text-4);">—</span>');
+  return `<tr>
+    <td style="padding:6px 0;color:var(--text-3);width:40%;border-bottom:1px solid var(--border);">${label}</td>
+    <td style="padding:6px 0;font-weight:500;border-bottom:1px solid var(--border);">${display}</td>
+  </tr>`;
+}
+
+function openIns() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('ins-from').value = today;
+  document.getElementById('ins-modal').style.display = 'flex';
+}
+function closeIns() { document.getElementById('ins-modal').style.display = 'none'; }
+
+async function submitIns() {
+  const company = document.getElementById('ins-company').value.trim();
+  const policy  = document.getElementById('ins-policy').value.trim();
+  const from    = document.getElementById('ins-from').value;
+  const until   = document.getElementById('ins-until').value;
+  if (!company || !policy || !until) { showAlert('شركة التأمين ورقم الوثيقة وتاريخ الانتهاء مطلوبة','error'); return; }
+
+  const res  = await fetch('/api/v1/vehicles/insurance', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ vehicle_id:parseInt(vid), company_name:company, policy_number:policy, valid_from:from, valid_until:until })
+  });
+  const data = await res.json();
+  if (data.success) { closeIns(); showAlert('✅ تم حفظ بيانات التأمين','success'); setTimeout(load, 1000); }
+  else showAlert(data.message||'خطأ','error');
+}
+
+// ── تعديل بيانات المركبة ──────────────────────────────────────
+function openEdit() {
+  document.getElementById('edit-type').value      = V.vehicle_type || '';
+  document.getElementById('edit-usage').value     = V.usage_type || '';
+  document.getElementById('edit-make').value      = V.make || '';
+  document.getElementById('edit-model').value     = V.model || '';
+  document.getElementById('edit-year').value      = V.year || '';
+  document.getElementById('edit-color').value     = V.color || '';
+  document.getElementById('edit-fuel').value      = V.fuel_type || '';
+  document.getElementById('edit-cylinders').value = V.cylinders || '';
+  document.getElementById('edit-origin').value    = V.country_of_origin || '';
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+function closeEdit() { document.getElementById('edit-modal').style.display = 'none'; }
+
+async function submitEdit() {
+  const body = {
+    vehicle_type:      document.getElementById('edit-type').value.trim(),
+    usage_type:        document.getElementById('edit-usage').value.trim(),
+    make:               document.getElementById('edit-make').value.trim(),
+    model:              document.getElementById('edit-model').value.trim(),
+    year:               document.getElementById('edit-year').value,
+    color:              document.getElementById('edit-color').value.trim(),
+    fuel_type:          document.getElementById('edit-fuel').value.trim(),
+    cylinders:          document.getElementById('edit-cylinders').value,
+    country_of_origin:  document.getElementById('edit-origin').value.trim()
+  };
+  const res  = await fetch(`/api/v1/vehicles/${vid}`, {
+    method:'PUT',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.success) { closeEdit(); showAlert('✅ تم تحديث بيانات المركبة','success'); setTimeout(load, 800); }
+  else showAlert(data.message||'خطأ','error');
+}
+
+// ── حذف المركبة ────────────────────────────────────────────────
+async function deleteVehicle() {
+  if (!confirm(`هل أنت متأكد من حذف المركبة ${V?.plate_number||''}؟ سيتم حذف كل سجلاتها (تأمين، بل، فحص، مخالفات) ولا يمكن التراجع.`)) return;
+  const res  = await fetch(`/api/v1/vehicles/${vid}`, { method:'DELETE', headers:{'Authorization':'Bearer '+T} });
+  const data = await res.json();
+  if (data.success) { showAlert('✅ تم حذف المركبة','success'); setTimeout(()=>location.href='/vehicles', 1000); }
+  else showAlert(data.message||'خطأ','error');
+}
+
+// ── فك التعليق عن مركبة معلَّقة للبيع ────────────────────────────
+async function unsuspendVehicle(force) {
+  if (!force && !confirm(`هل تريد فك التعليق عن المركبة ${V?.plate_number||''}؟ ستعود حالتها إلى "نشطة".`)) return;
+  const reason = prompt('سبب فك التعليق (اختياري — مثال: فشلت الصفقة)') || '';
+  const res  = await fetch(`/api/v1/vehicles/${vid}/unsuspend`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+T},
+    body: JSON.stringify({ reason, force: !!force })
+  });
+  const data = await res.json();
+  if (data.success) { showAlert('✅ '+(data.message||'تم فك التعليق'),'success'); setTimeout(()=>location.reload(), 1000); }
+  else if (data.data && data.data.active_transfer) {
+    if (confirm(`${data.message}\n\nهل تريد إلغاء طلب نقل الملكية العالق وفك التعليق معاً؟ (لا يمكن التراجع عن هذا الإلغاء)`)) {
+      unsuspendVehicle(true);
+    }
+  }
+  else showAlert(data.message||'خطأ','error');
+}
+
+// ── تحديث البل ─────────────────────────────────────────────────
+function openPermit() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('permit-from').value = today;
+  document.getElementById('permit-modal').style.display = 'flex';
+}
+function closePermit() { document.getElementById('permit-modal').style.display = 'none'; }
+
+async function submitPermit() {
+  const valid_from  = document.getElementById('permit-from').value;
+  const valid_until = document.getElementById('permit-until').value;
+  const fee         = document.getElementById('permit-fee').value;
+  if (!valid_until) { showAlert('تاريخ الانتهاء مطلوب','error'); return; }
+
+  const res  = await fetch('/api/v1/vehicles/permit/renew', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ vehicle_id:parseInt(vid), valid_from, valid_until, fee })
+  });
+  const data = await res.json();
+  if (data.success) { closePermit(); showAlert('✅ تم تحديث البل','success'); setTimeout(load, 800); }
+  else showAlert(data.message||'خطأ','error');
+}
+
+// ── تحديث الفحص الفني ──────────────────────────────────────────
+function openInsp() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('insp-from').value = today;
+  document.getElementById('insp-modal').style.display = 'flex';
+}
+function closeInsp() { document.getElementById('insp-modal').style.display = 'none'; }
+
+async function submitInsp() {
+  const result      = document.getElementById('insp-result').value;
+  const valid_from  = document.getElementById('insp-from').value;
+  const valid_until = document.getElementById('insp-until').value;
+  const notes       = document.getElementById('insp-notes').value.trim();
+  const fee         = document.getElementById('insp-fee').value;
+  if (!valid_until) { showAlert('تاريخ الانتهاء مطلوب','error'); return; }
+
+  const res  = await fetch('/api/v1/vehicles/inspection/renew', {
+    method:'POST',
+    headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+    body: JSON.stringify({ vehicle_id:parseInt(vid), result, valid_from, valid_until, notes, fee })
+  });
+  const data = await res.json();
+  if (data.success) { closeInsp(); showAlert('✅ تم تحديث الفحص الفني','success'); setTimeout(load, 800); }
+  else showAlert(data.message||'خطأ','error');
+}
+
+function printQR() {
+  if (!V?.qr_token) return;
+  window.open(`/api/v1/qr-print/${V.qr_token}?token=${encodeURIComponent(T)}`, '_blank');
+}
+
+function showAlert(msg,type) {
+  const el=document.getElementById('alert');
+  el.className=`alert alert-${type==='error'?'error':'success'}`;
+  el.textContent=msg; el.style.display='flex';
+  if(type!=='success') setTimeout(()=>el.style.display='none',5000);
+}
+
+load();
+</script>
+</body>
+</html>

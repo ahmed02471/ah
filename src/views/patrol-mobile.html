@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>الدورية المتحركة — مرور سبها</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    :root {
+      --bg:     #0d1b2e;
+      --bg2:    #132035;
+      --card:   #1a2d45;
+      --border: rgba(255,255,255,.1);
+      --text:   #fff;
+      --text2:  rgba(255,255,255,.6);
+      --green:  #10b981;
+      --red:    #ef4444;
+      --yellow: #f59e0b;
+      --blue:   #3b82f6;
+    }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:'Cairo',sans-serif; direction:rtl; padding-bottom:20px; }
+
+    .hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg2); border-bottom:1px solid var(--border); }
+    .hdr-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; color:var(--text); }
+    .back-btn { padding:6px 12px; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:8px; color:var(--text2); cursor:pointer; font-family:'Cairo',sans-serif; font-size:12px; }
+
+    /* كاميرا القراءة */
+    .cam-wrap { position:relative; width:100%; max-width:480px; margin:0 auto; background:#000; overflow:hidden; }
+    #cam-video { width:100%; display:block; max-height:300px; object-fit:cover; background:#000; }
+    .scan-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+    .scan-frame {
+      width:200px; height:200px;
+      border:2px solid rgba(59,130,246,.8);
+      border-radius:12px;
+      box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+      animation:pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{border-color:rgba(59,130,246,.8)} 50%{border-color:rgba(16,185,129,.9)} }
+    .scan-line {
+      position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,#3b82f6,transparent);
+      animation:scanLine 2s linear infinite;
+    }
+    @keyframes scanLine { 0%{top:0} 100%{top:196px} }
+    .cam-status { text-align:center; font-size:11px; color:rgba(255,255,255,.5); padding:5px; background:rgba(0,0,0,.7); }
+
+    /* بحث يدوي */
+    .manual-search { margin:12px 14px; display:flex; gap:8px; }
+    .manual-search input { flex:1; padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05); color:#fff; font-family:'Cairo',sans-serif; font-size:13px; }
+    .manual-search input::placeholder { color:rgba(255,255,255,.3); }
+    .manual-search button { padding:10px 14px; background:#1d4ed8; border:none; border-radius:8px; color:#fff; cursor:pointer; font-family:'Cairo',sans-serif; font-size:13px; font-weight:700; }
+
+    /* بحث يدوي */
+    .manual-search input { background:var(--card); border-color:var(--border); }
+    .manual-search button { background:var(--blue); }
+
+    /* نتيجة المسح */
+    .result-wrap { margin:0 12px 14px; border-radius:14px; overflow:hidden; border:1px solid var(--border); }
+    .result-header { padding:12px 16px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .result-header.green  { background:rgba(16,185,129,.2); border-bottom:2px solid var(--green); }
+    .result-header.red    { background:rgba(239,68,68,.2);  border-bottom:2px solid var(--red); }
+    .result-header.yellow { background:rgba(245,158,11,.2); border-bottom:2px solid var(--yellow); }
+    .result-body { background:var(--card); padding:14px 16px; }
+    .result-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .result-row:last-child { border:none; }
+    .result-label { color:var(--text2); font-size:12px; }
+    .result-val { font-weight:700; }
+
+    .alert-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; margin:3px; }
+    .alert-pill.danger  { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#fca5a5; }
+    .alert-pill.warning { background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.4); color:#fde68a; }
+
+    /* زر المخالفة */
+    .viol-btn {
+      width:100%; padding:13px; margin-top:12px;
+      background:linear-gradient(135deg,#dc2626,#b91c1c);
+      border:none; border-radius:10px;
+      color:#fff; font-family:'Cairo',sans-serif;
+      font-size:14px; font-weight:700; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      box-shadow:0 4px 14px rgba(220,38,38,.35);
+    }
+    .viol-btn:active { transform:scale(.98); }
+
+    .new-scan-btn {
+      width:100%; padding:11px; margin-top:8px;
+      background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+      color:var(--text2); font-family:'Cairo',sans-serif; font-size:13px; cursor:pointer;
+    }
+
+    /* Modal المخالفة */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:100; display:none; align-items:flex-end; justify-content:center; backdrop-filter:blur(3px); }
+    .modal-overlay.open { display:flex; }
+    .modal-sheet {
+      background:var(--bg2); border-radius:20px 20px 0 0;
+      padding:20px; width:100%; max-width:500px;
+      max-height:88vh; overflow-y:auto;
+      border:1px solid var(--border); border-bottom:none;
+    }
+    .modal-handle { width:36px; height:4px; background:rgba(255,255,255,.2); border-radius:2px; margin:0 auto 16px; }
+    .modal-title { font-size:15px; font-weight:800; color:#fca5a5; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .modal-summary { background:var(--card); border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:14px; color:var(--text2); }
+    .modal-label { font-size:11px; color:var(--text2); margin:12px 0 5px; font-weight:600; letter-spacing:.5px; }
+    .modal-select, .modal-input {
+      width:100%; padding:11px 12px; border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--card); color:var(--text);
+      font-family:'Cairo',sans-serif; font-size:13px;
+    }
+    .modal-select option { background:#1a2d45; }
+    .modal-fine { font-size:24px; font-weight:900; color:#fca5a5; margin:8px 0; }
+    .modal-footer { display:flex; gap:8px; margin-top:16px; }
+    .btn-submit { flex:1; padding:13px; background:linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; box-shadow:0 4px 12px rgba(220,38,38,.3); }
+    .btn-cancel { padding:13px 16px; background:var(--card); color:var(--text2); border:1px solid var(--border); border-radius:10px; cursor:pointer; font-family:'Cairo',sans-serif; }
+
+    .section-title { font-size:11px; font-weight:700; color:var(--blue); letter-spacing:.5px; padding:10px 0 4px; border-top:1px solid var(--border); margin-top:6px; }
+    .idle { text-align:center; padding:40px 20px; color:rgba(255,255,255,.25); }
+    .idle p { font-size:13px; }
+
+    .toast { position:fixed; top:16px; left:50%; transform:translateX(-50%); padding:12px 22px; border-radius:12px; font-size:13px; font-weight:700; z-index:200; white-space:nowrap; animation:tin .3s ease; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+    @keyframes tin { from{top:-50px;opacity:0} to{top:16px;opacity:1} }
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="hdr-title">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    الدورية المتحركة
+  </span>
+  <button class="back-btn" onclick="location.href='/dashboard'">رجوع</button>
+</div>
+
+<!-- الكاميرا -->
+<div class="cam-wrap">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <div class="scan-overlay">
+    <div class="scan-frame">
+      <div class="scan-line"></div>
+    </div>
+  </div>
+  <div class="cam-status" id="cam-status">جاري تشغيل الكاميرا...</div>
+</div>
+
+<!-- بحث يدوي -->
+<div class="manual-search">
+  <input id="manual-q" placeholder="أدخل رقم اللوحة أو رمز QR..." dir="ltr"
+    onkeydown="if(event.key==='Enter')manualSearch()">
+  <button onclick="manualSearch()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </button>
+</div>
+
+<!-- النتيجة -->
+<div id="result-area">
+  <div class="idle">
+    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1" style="display:block;margin:0 auto 12px;">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z"/>
+    </svg>
+    <p>وجّه الكاميرا نحو رمز QR على المركبة</p>
+  </div>
+</div>
+
+<!-- Modal المخالفة -->
+<div class="modal-overlay" id="viol-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ تحرير مخالفة مرورية</div>
+    <div class="modal-summary" id="modal-summary"></div>
+    <div class="modal-label">نوع المخالفة *</div>
+    <select class="modal-select" id="vt-select" onchange="updateFine()">
+      <option value="">— اختر نوع المخالفة —</option>
+    </select>
+    <div class="modal-fine" id="fine-display">—</div>
+    <div class="modal-label">موقع المخالفة</div>
+    <input class="modal-input" id="viol-location" placeholder="الشارع أو نقطة التفتيش...">
+    <div class="modal-label">ملاحظات (اختياري)</div>
+    <input class="modal-input" id="viol-desc" placeholder="وصف إضافي...">
+    <div class="modal-footer">
+      <button class="btn-submit" onclick="submitViol()">تسجيل المخالفة</button>
+      <button class="btn-cancel" onclick="closeModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/jsQR.js"></script>
+<script>
+const T = localStorage.getItem('auth_token');
+let lastCode = '';
+let currentVehicle = null;
+let vtypes = [];
+let scanning = false;
+
+function setCamStatus(msg) {
+  const el = document.getElementById('cam-status');
+  if (el) el.textContent = msg;
+}
+
+// تحميل أنواع المخالفات
+async function loadVtypes() {
+  try {
+    const res  = await fetch('/api/v1/admin/violation-types', { headers:{Authorization:'Bearer '+T} });
+    const data = await res.json();
+    if (data.success) {
+      vtypes = data.data;
+      const sel = document.getElementById('vt-select');
+      vtypes.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v.id; o.dataset.fine = v.fine_amount;
+        o.textContent = `${v.name_ar} — ${v.fine_amount} د.ل`;
+        sel.appendChild(o);
+      });
+      const exc = document.createElement('option');
+      exc.value = 'exceptional'; exc.textContent = '⚠️ مخالفة استثنائية';
+      sel.appendChild(exc);
+    }
+  } catch(e) {}
+}
+
+function onDetected(raw) {
+  if (!raw || raw === lastCode) return;
+  lastCode = raw;
+  setCamStatus('✅ جاري البحث...');
+  fetchByQR(raw);
+  setTimeout(() => { lastCode = ''; }, 6000);
+}
+
+// ── بدء الكاميرا ──────────────────────────────────────────────────
+async function startCamera() {
+  const video  = document.getElementById('cam-video');
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = stream;
+    await video.play();
+    scanning = true;
+
+    // ── مسار 1: BarcodeDetector (Chrome Android — سريع جداً) ─────
+    if ('BarcodeDetector' in window) {
+      setCamStatus('📷 BarcodeDetector — جاهز');
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+      async function bdLoop() {
+        if (!scanning) return;
+        try {
+          if (video.readyState >= 2) {
+            const codes = await detector.detect(video);
+            if (codes.length) onDetected(codes[0].rawValue);
+          }
+        } catch(_) {}
+        requestAnimationFrame(bdLoop);
+      }
+      bdLoop();
+
+    // ── مسار 2: jsQR (جميع المتصفحات) ───────────────────────────
+    } else if (typeof jsQR !== 'undefined') {
+      setCamStatus('📷 jsQR — جاهز');
+
+      function jsqrLoop() {
+        if (!scanning) return;
+        if (video.readyState >= 2) {
+          canvas.width  = video.videoWidth  || 640;
+          canvas.height = video.videoHeight || 480;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+          if (code) onDetected(code.data);
+        }
+        requestAnimationFrame(jsqrLoop);
+      }
+      jsqrLoop();
+
+    } else {
+      setCamStatus('⚠️ استخدم البحث اليدوي أدناه');
+    }
+
+  } catch(e) {
+    setCamStatus('❌ لا يمكن الوصول للكاميرا — استخدم البحث اليدوي');
+  }
+}
+
+window.addEventListener('load', () => {
+  loadVtypes();
+  startCamera();
+});
+
+// مسح يدوي
+async function manualSearch() {
+  const q = document.getElementById('manual-q').value.trim();
+  if (!q) return;
+  if (q.length >= 20 && !/\s/.test(q)) {
+    await fetchByQR(q);
+  } else {
+    try {
+      const res  = await fetch(`/api/v1/vehicles?q=${encodeURIComponent(q)}&limit=1`, {headers:{Authorization:'Bearer '+T}});
+      const data = await res.json();
+      if (data.success && data.data.vehicles?.length) {
+        await fetchByQR(data.data.vehicles[0].qr_token);
+      } else {
+        showResult(null, '❌ لم يتم العثور على المركبة: ' + q);
+      }
+    } catch(e) {
+      showResult(null, '❌ خطأ في الاتصال');
+    }
+  }
+}
+
+// جلب بيانات المركبة
+async function fetchByQR(raw) {
+  // دعم التوكن القصير (8 أحرف) والرابط القديم
+  const token = raw.includes('/') ? raw.split('/').pop() : raw.trim();
+  try {
+    const res  = await fetch(`/api/v1/vehicles/qr/${token}`, {headers:{Authorization:'Bearer '+T}});
+    const data = await res.json();
+    if (data.success) showResult(data.data);
+    else showResult(null, '❌ رمز QR غير صالح أو المركبة غير مسجلة');
+  } catch(e) {
+    showResult(null, '❌ خطأ في الاتصال بالخادم');
+  }
+}
+
+function showResult(v, errMsg) {
+  if (!v) {
+    document.getElementById('result-area').innerHTML = `
+      <div class="result-wrap">
+        <div class="result-header red">❌ ${errMsg}</div>
+      </div>`;
+    currentVehicle = null;
+    return;
+  }
+
+  currentVehicle = v;
+  const alerts  = v.alerts || [];
+  const hasDang = alerts.some(a => a.level === 'danger');
+  const hasWarn = alerts.some(a => a.level === 'warning');
+  const cls    = hasDang ? 'red' : hasWarn ? 'yellow' : 'green';
+  const icon   = hasDang ? '⛔' : hasWarn ? '⚠️' : '✅';
+  const status = hasDang ? 'تنبيه — مطلوب إجراء' : hasWarn ? 'تحذير' : 'سليمة — لا مشاكل';
+
+  // بناء قسم المخالفات السابقة
+  const viols = v.recent_violations || [];
+  const violsHtml = viols.length ? `
+    <div class="section-title">📋 آخر المخالفات</div>
+    ${viols.map(vl => `
+      <div class="result-row">
+        <span class="result-label">${fmtDate(vl.issued_at)}</span>
+        <span class="result-val" style="font-size:12px;">
+          ${vl.type_name||'مخالفة'} — ${vl.fine_amount} د.ل
+          <span style="color:${vl.status==='unpaid'?'#fca5a5':'#6ee7b7'};font-size:10px;margin-right:4px;">
+            ${vl.status==='unpaid'?'غير مدفوعة':'مدفوعة'}
+          </span>
+        </span>
+      </div>`).join('')}` : '';
+
+  // تاريخ التسجيل ونقل الملكية
+  const tr = v.last_transfer;
+  const histHtml = `
+    <div class="section-title">📅 تاريخ المركبة</div>
+    <div class="result-row">
+      <span class="result-label">تاريخ التسجيل</span>
+      <span class="result-val">${fmtDate(v.registered_at||v.created_at)}</span>
+    </div>
+    ${tr ? `<div class="result-row">
+      <span class="result-label">آخر نقل ملكية</span>
+      <span class="result-val" style="font-size:12px;">${fmtDate(tr.final_admin_at)}<br><span style="color:var(--text2);font-size:11px;">إلى: ${tr.to_owner_name||'—'}</span></span>
+    </div>` : ''}`;
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-wrap">
+      <div class="result-header ${cls}">
+        <span>${icon} ${v.plate_number} — ${status}</span>
+      </div>
+      <div class="result-body">
+        <div class="result-row"><span class="result-label">المالك</span><span class="result-val">${v.owner_name||'—'}</span></div>
+        <div class="result-row"><span class="result-label">المركبة</span><span class="result-val">${v.make||''} ${v.model||''} ${v.year||''}</span></div>
+        <div class="result-row"><span class="result-label">رقم الهيكل</span><span class="result-val" style="font-family:monospace;font-size:11px;">${v.chassis_number||'—'}</span></div>
+        <div class="result-row"><span class="result-label">الرقم الوطني</span><span class="result-val" style="font-family:monospace;">${v.owner_national_id||'—'}</span></div>
+        <div class="result-row"><span class="result-label">التأمين حتى</span><span class="result-val" style="color:${expColor(v.ins_expiry)};">${v.ins_expiry||'—'}</span></div>
+        <div class="result-row"><span class="result-label">البل حتى</span><span class="result-val" style="color:${expColor(v.bel_expiry)};">${v.bel_expiry||'—'}</span></div>
+        <div class="result-row"><span class="result-label">الفحص حتى</span><span class="result-val" style="color:${expColor(v.insp_expiry)};">${v.insp_expiry||'—'}</span></div>
+        ${alerts.length ? `<div style="margin-top:10px;">${alerts.map(a=>`<span class="alert-pill ${a.level}">${a.msg}</span>`).join('')}</div>` : ''}
+        ${histHtml}
+        ${violsHtml}
+        <button class="viol-btn" onclick="openModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          تحرير مخالفة
+        </button>
+        <button class="new-scan-btn" onclick="resetScan()">🔄 مسح جديد</button>
+      </div>
+    </div>`;
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return d.toString().split('T')[0].split(' ')[0];
+}
+
+function expColor(d) {
+  if (!d) return 'rgba(255,255,255,.4)';
+  const days = Math.ceil((new Date(d)-new Date())/86400000);
+  return days < 0 ? '#fca5a5' : days < 30 ? '#fcd34d' : '#6ee7b7';
+}
+
+function resetScan() {
+  currentVehicle = null;
+  lastCode = '';
+  setCamStatus('وجّه الكاميرا نحو رمز QR');
+  document.getElementById('result-area').innerHTML = `
+    <div class="idle">
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1" style="display:block;margin:0 auto 12px;">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z M17 17h3v3h-3z"/>
+      </svg>
+      <p>وجّه الكاميرا نحو رمز QR على المركبة</p>
+    </div>`;
+  document.getElementById('manual-q').value = '';
+}
+
+// ─── Modal المخالفة ────────────────────────────────────────────
+function openModal() {
+  if (!currentVehicle) return;
+  document.getElementById('modal-summary').textContent =
+    `${currentVehicle.plate_number} — ${currentVehicle.make||''} ${currentVehicle.model||''} | ${currentVehicle.owner_name||'—'}`;
+  document.getElementById('vt-select').value = '';
+  document.getElementById('fine-display').textContent = '—';
+  document.getElementById('viol-location').value = '';
+  document.getElementById('viol-desc').value = '';
+  document.getElementById('viol-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('viol-modal').classList.remove('open');
+}
+
+function updateFine() {
+  const sel = document.getElementById('vt-select');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('fine-display').textContent =
+    opt.value === 'exceptional' ? 'يحددها قسم المخالفات' :
+    opt.dataset.fine ? `${opt.dataset.fine} دينار ليبي` : '—';
+}
+
+async function submitViol() {
+  const vtId = document.getElementById('vt-select').value;
+  const desc = document.getElementById('viol-desc').value.trim();
+  const loc  = document.getElementById('viol-location').value.trim();
+  if (!vtId) { toast('اختر نوع المخالفة أولاً', 'red'); return; }
+  if (!currentVehicle) return;
+
+  const isExc = vtId === 'exceptional';
+  const url   = isExc ? '/api/v1/violations/exceptional' : '/api/v1/violations';
+  const body  = isExc
+    ? { vehicle_id: currentVehicle.id, description: desc||'مخالفة ميدانية', location_note: loc }
+    : { vehicle_id: currentVehicle.id, violation_type_id: parseInt(vtId), location_note: loc, description: desc };
+
+  try {
+    const res  = await fetch(url, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+T,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeModal();
+      toast(isExc ? '✅ أُرسلت للمخالفات للمراجعة' : `✅ تم تسجيل المخالفة — ${data.data?.fine_amount||''} د.ل`, 'green');
+      setTimeout(() => resetScan(), 3000);
+    } else {
+      toast(data.message || 'حدث خطأ', 'red');
+    }
+  } catch(e) {
+    toast('❌ خطأ في الاتصال', 'red');
+  }
+}
+
+function toast(msg, color='green') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  el.style.background = color==='red' ? '#dc2626' : '#065f46';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>
