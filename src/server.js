@@ -101,7 +101,8 @@ try {
     }
     fs.writeFileSync(DB_PATH, req.file.buffer);
     res.json({ success: true, message: 'تم الاستيراد — سيعاد تشغيل الخادم الآن' });
-    setTimeout(() => process.exit(0), 500);
+    // كود خروج غير صفري (1) ليتوافق مع سياسة إعادة التشغيل "On Failure"
+    setTimeout(() => process.exit(1), 500);
   });
 } catch (e) { console.warn('[restore-db]', e.message); }
 
