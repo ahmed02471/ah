@@ -40,7 +40,7 @@ const db = new Database(path.resolve(DB_PATH));
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-const { migrate } = require('../database/migrations/001_create_tables');
+const { migrate } = require('../src/migrations/001_create_tables');
 migrate();
 
 const h = (p) => bcrypt.hashSync(p, 12);

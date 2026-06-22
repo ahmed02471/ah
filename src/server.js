@@ -28,7 +28,7 @@ try {
   ).get();
   if (!hasUsersTable) {
     console.log('[DB] لا توجد جداول — تشغيل الترحيل (migration) والبذر (seed)...');
-    const { migrate } = require('../database/migrations/001_create_tables');
+    const { migrate } = require('./migrations/001_create_tables');
     migrate();
 
     const bcrypt = require('bcryptjs');

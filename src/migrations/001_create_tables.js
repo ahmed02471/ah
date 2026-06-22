@@ -1,7 +1,11 @@
 /**
- * database/migrations/001_create_tables.js
+ * src/migrations/001_create_tables.js
  * نظام إدارة مرور سبها — Schema النهائي
  * مبني على: البحث الأكاديمي + القانون 11/1984 + الكتيب الورقي + المحادثة
+ *
+ * ملاحظة مهمة: هذا الملف يجب أن يبقى خارج مجلد database/ لأن ذلك المجلد
+ * هو مسار Volume الدائم على Railway — أي ملف كود يوضع داخله يصبح غير
+ * مرئي وقت التشغيل لأن الـ Volume الفارغ "يُغطّي" محتوى الصورة المبنية.
  */
 
 const Database = require('better-sqlite3');
