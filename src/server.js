@@ -21,6 +21,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── إضافة أعمدة جديدة بأمان (إذا لم تكن موجودة) ──────────────────
 try {
   const db = require('./config/database');
+
+  // ── إنشاء الجداول والمستخدمين الأساسيين إذا كانت القاعدة فارغة تماماً ──
+  const hasUsersTable = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+  ).get();
+  if (!hasUsersTable) {
+    console.log('[DB] لا توجد جداول — تشغيل الترحيل (migration) والبذر (seed)...');
+    const { migrate } = require('../database/migrations/001_create_tables');
+    migrate();
+
+    const bcrypt = require('bcryptjs');
+    const h = (p) => bcrypt.hashSync(p, 12);
+    const staff = [
+      { national_id: '100000000001', username: 'admin',           full_name: 'مدير نظام مرور سبها',        full_name_en: 'Admin Sabha Traffic',   role: 'ADMIN',           phone: '0910000001', gender: 'ذكر', password: 'Admin@2026' },
+      { national_id: '100000000002', username: 'reg.chief',       full_name: 'رئيس قسم التسجيل',           full_name_en: 'Registration Chief',    role: 'REG_CHIEF',       phone: '0910000002', gender: 'ذكر', password: 'Reg@2026' },
+      { national_id: '100000000003', username: 'insp.chief',      full_name: 'رئيس قسم الفحص الفني',        full_name_en: 'Inspection Chief',      role: 'INSP_CHIEF',      phone: '0910000003', gender: 'ذكر', password: 'Insp@2026' },
+      { national_id: '100000000004', username: 'violations.dept', full_name: 'رئيس قسم المخالفات',          full_name_en: 'Violations Department', role: 'VIOLATIONS_DEPT', phone: '0910000004', gender: 'ذكر', password: 'Viol@2026' },
+      { national_id: '100000000005', username: 'plate.dept',      full_name: 'موظف قسم اللوحات',            full_name_en: 'Plate Department',      role: 'PLATE_DEPT',      phone: '0910000005', gender: 'ذكر', password: 'Plate@2026' },
+      { national_id: '100000000006', username: 'officer.001',     full_name: 'النقيب أحمد الورفلي',         full_name_en: 'Ahmed Warfali',         role: 'OFFICER',         phone: '0910000006', gender: 'ذكر', password: 'Officer@2026' },
+    ];
+    const insertUser = db.prepare(`
+      INSERT OR IGNORE INTO users
+        (national_id, username, full_name, full_name_en, role, phone, gender, password_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const u of staff) {
+      insertUser.run(u.national_id, u.username, u.full_name, u.full_name_en, u.role, u.phone, u.gender, h(u.password));
+    }
+    const adminRow = db.prepare('SELECT id FROM users WHERE role=?').get('ADMIN');
+    const adminId = adminRow ? adminRow.id : null;
+    const cw = db.prepare(`INSERT OR IGNORE INTO contract_writers (name,court_number,phone,added_by) VALUES(?,?,?,?)`);
+    cw.run('المحرر أحمد الورفلي',  'SBH-001', '0911111111', adminId);
+    cw.run('المحرر علي المنصوري',  'SBH-002', '0912222222', adminId);
+    cw.run('المحررة فاطمة الشريف', 'SBH-003', '0913333333', adminId);
+    console.log('[DB] ✅ تم إنشاء الجداول والمستخدمين الأساسيين بنجاح');
+  }
+
   const tryAdd = (table, col, type) => {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c=>c.name);
     if (!cols.includes(col)) {
