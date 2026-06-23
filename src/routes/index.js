@@ -290,5 +290,38 @@ router.get('/v1/vehicles/debug/:id', authenticate, authorize('ADMIN','REG_CHIEF'
   } catch(e) { res.json({success:false,error:e.message}); }
 });
 
+// Admin: ربط بريد إلكتروني بمالك مركبة معيّنة (لتفعيل إشعارات المخالفات بالبريد)
+// مثال استخدام: /api/v1/admin/link-email?plate=81502&email=alshreahmad660@gmail.com&token=...
+router.get('/v1/admin/link-email', authenticate, authorize('ADMIN'), (req,res) => {
+  try {
+    const plate = (req.query.plate || '').trim();
+    const email = (req.query.email || '').trim();
+    if (!plate || !email) return res.json({ success:false, message:'plate و email مطلوبان كـ query params' });
+
+    const vehicle = db.prepare(`SELECT id, plate_number FROM vehicles WHERE plate_number LIKE ?`).get(`%${plate}%`);
+    if (!vehicle) return res.json({ success:false, message:'لم يتم العثور على مركبة مطابقة' });
+
+    const owner = db.prepare(`
+      SELECT u.id, u.national_id, u.full_name FROM vehicle_owners vo
+      JOIN users u ON u.national_id = vo.owner_national_id
+      WHERE vo.vehicle_id = ? AND vo.is_current = 1
+    `).get(vehicle.id);
+    if (!owner) return res.json({ success:false, message:'لا يوجد مالك حالي لهذه المركبة' });
+
+    const existing = db.prepare(`SELECT id, email FROM citizen_registrations WHERE user_id = ? ORDER BY id DESC LIMIT 1`).get(owner.id);
+    if (existing) {
+      db.prepare(`UPDATE citizen_registrations SET email = ? WHERE id = ?`).run(email, existing.id);
+    } else {
+      const reviewNumber = String(Math.floor(100000 + Math.random() * 899999));
+      db.prepare(`
+        INSERT INTO citizen_registrations (review_number, user_id, full_name, national_id, phone, email, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'approved', datetime('now'))
+      `).run(reviewNumber, owner.id, owner.full_name, owner.national_id, '0900001111', email);
+    }
+
+    res.json({ success:true, message:`تم ربط ${email} بمالك المركبة ${vehicle.plate_number} (${owner.full_name})` });
+  } catch(e) { res.status(500).json({ success:false, message:e.message }); }
+});
+
 module.exports = router;
 
